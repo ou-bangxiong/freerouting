@@ -11,6 +11,7 @@ import app.freerouting.management.TextManager;
 import app.freerouting.tests.BoardValidator;
 
 import java.awt.*;
+import javax.swing.Timer;
 
 /**
  * GUI interactive thread for the batch auto-router + route optimizer.
@@ -21,6 +22,8 @@ public class AutorouterAndRouteOptimizerThread extends InteractiveActionThread
   private final BatchOptRoute batch_opt_route;
   boolean save_intermediate_stages;
   float optimization_improvement_threshold;
+  private int time_limit = 1000 * 60 * 10;
+  public Timer timer = null;
 
   /**
    * Creates a new instance of AutorouterAndRouteOptimizerThread
@@ -49,12 +52,19 @@ public class AutorouterAndRouteOptimizerThread extends InteractiveActionThread
   @Override
   protected void thread_action()
   {
+    // creat timer
+    if (this.timer == null) {
+      this.creat_timer();
+    }
+    this.timer.start();
+
     for (ThreadActionListener hl : this.listeners)
     {
       hl.autorouterStarted();
     }
 
     FRLogger.traceEntry("BatchAutorouterThread.thread_action()");
+    int incomplete_count_before = hdlg.get_ratsnest().incomplete_count();
     try
     {
       TextManager tm = new TextManager(InteractiveState.class, hdlg.get_locale());
@@ -166,7 +176,20 @@ public class AutorouterAndRouteOptimizerThread extends InteractiveActionThread
       FRLogger.error(e.getLocalizedMessage(), e);
     }
 
-    FRLogger.traceExit("BatchAutorouterThread.thread_action()");
+    FRLogger.info("Added: " + hdlg.get_routing_board().get_vias().size() + " vars");
+    FRLogger.info("Added: " + hdlg.get_routing_board().get_traces().size() + " traces");
+
+    int incomplete_count_after = hdlg.get_ratsnest().incomplete_count();
+    FRLogger.info("Routabitity: " 
+                + (incomplete_count_before - incomplete_count_after) 
+                / (double)incomplete_count_before * 100.0 
+                + "%");
+
+    double autoroutingSecondsToFinished = FRLogger
+            .traceExit("BatchAutorouterThread.thread_action()");
+    FRLogger.info("Auto-routing finished: "
+                    + autoroutingSecondsToFinished
+                    + " s.");
 
     for (ThreadActionListener hl : this.listeners)
     {
@@ -180,6 +203,19 @@ public class AutorouterAndRouteOptimizerThread extends InteractiveActionThread
       }
     }
   }
+
+  
+  /**
+   * Creates a timer that stops the autorouter after a given time limit.*
+   */
+  public void creat_timer(){
+    this.timer = new Timer(this.time_limit, e -> {
+    request_stop();
+    request_stop_auto_router();
+    this.timer.stop();
+    FRLogger.warn("Autorouter stopped by timeout.");
+    });
+  } 
 
   @Override
   public void draw(Graphics p_graphics)
