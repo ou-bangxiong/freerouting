@@ -90,7 +90,60 @@ public abstract class ActivityReplayFileScope
    * automatically by the program did not work correctly, so the programmer has to keep it
    * up-to-date by hand.
    */
-  private static final ActivityReplayFileScope[] arr = {UNDO, REDO, GENERATE_SNAPSHOT, SET_CLEARANCE_COMPENSATION, SET_LAYER, SET_MANUAL_TRACE_CLEARANCE_CLASS, SET_MANUAL_TRACE_HALF_WIDTH, SET_MANUAL_TRACEWIDTH_SELECTION, SET_SNAP_ANGLE, SET_SELECTABLE, SET_SELECT_ON_ALL_LAYER, SET_STITCH_ROUTE, SET_TRACE_HALF_WIDTH, SET_PULL_TIGHT_REGION_WIDTH, SET_PULL_TIGHT_ACCURACY, SET_PUSH_ENABLED, SET_IGNORE_CONDUCTION, START_SELECT, TOGGLE_SELECT, SELECT_REGION, EXTEND_TO_WHOLE_CONNECTED_SETS, EXTEND_TO_WHOLE_CONNECTIONS, EXTEND_TO_WHOLE_COMPONENTS, EXTEND_TO_WHOLE_NETS, ASSIGN_SELECTED_TO_NEW_NET, ASSIGN_SELECTED_TO_NEW_GROUP, FIX_SELECTED_ITEMS, UNFIX_SELECTED_ITEMS, DELETE_SELECTED, CUTOUT_ROUTE, OPTIMIZE_SELECTED, AUTOROUTE_SELECTED, FANOUT_SELECTED, COMPLETE_SCOPE, CANCEL_SCOPE, CREATING_TILE, CREATING_CIRCLE, CREATING_POLYGONSHAPE, ADDING_HOLE, CREATING_TRACE, CHANGE_LAYER, DRAGGING_ITEMS, MAKING_SPACE, COPYING_ITEMS, MOVE_ITEMS, TURN_90_DEGREE, ROTATE, CHANGE_PLACEMENT_SIDE, SET_ZOOM_WITH_WHEEL, ASSIGN_CLEARANCE_CLASS, CENTER_DISPLAY, ZOOM_FRAME};
+  private static final ActivityReplayFileScope[] arr = {
+      UNDO,
+      REDO,
+      GENERATE_SNAPSHOT,
+      SET_CLEARANCE_COMPENSATION,
+      SET_LAYER,
+      SET_MANUAL_TRACE_CLEARANCE_CLASS,
+      SET_MANUAL_TRACE_HALF_WIDTH,
+      SET_MANUAL_TRACEWIDTH_SELECTION,
+      SET_SNAP_ANGLE,
+      SET_SELECTABLE,
+      SET_SELECT_ON_ALL_LAYER,
+      SET_STITCH_ROUTE,
+      SET_TRACE_HALF_WIDTH,
+      SET_PULL_TIGHT_REGION_WIDTH,
+      SET_PULL_TIGHT_ACCURACY,
+      SET_PUSH_ENABLED,
+      SET_IGNORE_CONDUCTION,
+      START_SELECT,
+      TOGGLE_SELECT,
+      SELECT_REGION,
+      EXTEND_TO_WHOLE_CONNECTED_SETS,
+      EXTEND_TO_WHOLE_CONNECTIONS,
+      EXTEND_TO_WHOLE_COMPONENTS,
+      EXTEND_TO_WHOLE_NETS,
+      ASSIGN_SELECTED_TO_NEW_NET,
+      ASSIGN_SELECTED_TO_NEW_GROUP,
+      FIX_SELECTED_ITEMS,
+      UNFIX_SELECTED_ITEMS,
+      DELETE_SELECTED,
+      CUTOUT_ROUTE,
+      OPTIMIZE_SELECTED,
+      AUTOROUTE_SELECTED,
+      FANOUT_SELECTED,
+      COMPLETE_SCOPE,
+      CANCEL_SCOPE,
+      CREATING_TILE,
+      CREATING_CIRCLE,
+      CREATING_POLYGONSHAPE,
+      ADDING_HOLE,
+      CREATING_TRACE,
+      CHANGE_LAYER,
+      DRAGGING_ITEMS,
+      MAKING_SPACE,
+      COPYING_ITEMS,
+      MOVE_ITEMS,
+      TURN_90_DEGREE,
+      ROTATE,
+      CHANGE_PLACEMENT_SIDE,
+      SET_ZOOM_WITH_WHEEL,
+      ASSIGN_CLEARANCE_CLASS,
+      CENTER_DISPLAY,
+      ZOOM_FRAME
+  };
   public final String name;
 
   /**
@@ -120,7 +173,7 @@ public abstract class ActivityReplayFileScope
    * Reads the scope from the input logfile. Returns the active interactive state after reading the
    * scope.
    */
-  public abstract InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling);
+  public abstract InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling);
 
   /**
    * Scopes marking the end of a cornerlist scope.
@@ -145,7 +198,7 @@ public abstract class ActivityReplayFileScope
      * from the input logfile. Returns the active interactive state after reading the scope.
      */
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       FloatPoint location = p_activityReplayFile.read_corner();
       if (location == null)
@@ -195,7 +248,7 @@ public abstract class ActivityReplayFileScope
     /**
      * Used for beginning a new CornerlistScope.
      */
-    public abstract InteractiveState start_scope(FloatPoint p_location, InteractiveState p_return_state, BoardHandling p_board_handling);
+    public abstract InteractiveState start_scope(FloatPoint p_location, InteractiveState p_return_state, GuiBoardManager p_board_handling);
   }
 
   private static class CreateTraceScope extends CornerlistScope
@@ -206,7 +259,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState start_scope(FloatPoint p_location, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState start_scope(FloatPoint p_location, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       return RouteState.get_instance(p_location, p_return_state, p_board_handling, null);
     }
@@ -220,7 +273,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState start_scope(FloatPoint p_location, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState start_scope(FloatPoint p_location, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       return TileConstructionState.get_instance(p_location, p_return_state, p_board_handling, null);
     }
@@ -234,7 +287,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState start_scope(FloatPoint p_location, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState start_scope(FloatPoint p_location, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       return CircleConstructionState.get_instance(p_location, p_return_state, p_board_handling, null);
     }
@@ -248,7 +301,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState start_scope(FloatPoint p_location, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState start_scope(FloatPoint p_location, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       return PolygonShapeConstructionState.get_instance(p_location, p_return_state, p_board_handling, null);
     }
@@ -262,7 +315,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState start_scope(FloatPoint p_location, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState start_scope(FloatPoint p_location, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       return HoleConstructionState.get_instance(p_location, p_return_state, p_board_handling, null);
     }
@@ -276,7 +329,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState start_scope(FloatPoint p_location, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState start_scope(FloatPoint p_location, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       return DragItemState.get_instance(p_location, p_return_state, p_board_handling, null);
     }
@@ -290,7 +343,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState start_scope(FloatPoint p_location, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState start_scope(FloatPoint p_location, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       return MakeSpaceState.get_instance(p_location, p_return_state, p_board_handling, null);
     }
@@ -304,7 +357,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState start_scope(FloatPoint p_location, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState start_scope(FloatPoint p_location, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       InteractiveState result;
       if (p_return_state instanceof SelectedItemState)
@@ -329,7 +382,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState start_scope(FloatPoint p_location, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState start_scope(FloatPoint p_location, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       InteractiveState result;
       if (p_return_state instanceof SelectedItemState)
@@ -346,7 +399,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       InteractiveState new_state = super.read_scope(p_activityReplayFile, p_return_state, p_board_handling);
       if (new_state == null)
@@ -365,7 +418,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       if (p_return_state instanceof MoveItemState)
       {
@@ -387,7 +440,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       if (p_return_state instanceof MoveItemState)
       {
@@ -409,7 +462,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       if (p_return_state instanceof MoveItemState)
       {
@@ -430,7 +483,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       if (p_return_state instanceof MoveItemState)
       {
@@ -452,7 +505,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       int new_layer = p_activityReplayFile.read_int();
       p_return_state.change_layer_action(new_layer);
@@ -468,7 +521,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       while (!(p_return_state instanceof MenuState))
       {
@@ -493,7 +546,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       if (!(p_return_state instanceof SelectedItemState))
       {
@@ -518,7 +571,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       if (!(p_return_state instanceof MenuState))
       {
@@ -550,7 +603,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       if (!(p_return_state instanceof SelectedItemState))
       {
@@ -583,7 +636,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       InteractiveState result;
 
@@ -608,7 +661,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       InteractiveState result;
 
@@ -633,7 +686,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       InteractiveState result;
 
@@ -658,7 +711,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       InteractiveState result;
 
@@ -686,7 +739,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       InteractiveState result;
 
@@ -715,7 +768,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       InteractiveState result;
 
@@ -743,7 +796,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       InteractiveState result;
 
@@ -768,7 +821,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       InteractiveState return_state = null;
       if (p_return_state instanceof SelectedItemState)
@@ -791,7 +844,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       InteractiveState return_state = null;
       if (p_return_state instanceof SelectedItemState)
@@ -814,7 +867,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       InteractiveState return_state = null;
       if (p_return_state instanceof SelectedItemState)
@@ -837,7 +890,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       InteractiveState return_state = null;
       if (p_return_state instanceof SelectedItemState)
@@ -860,7 +913,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       if (p_return_state instanceof SelectedItemState)
       {
@@ -882,7 +935,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       if (p_return_state instanceof SelectedItemState)
       {
@@ -904,7 +957,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       return p_return_state.complete();
     }
@@ -918,7 +971,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       return p_return_state.cancel();
     }
@@ -932,7 +985,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       int layer = p_activityReplayFile.read_int();
       int new_half_width = p_activityReplayFile.read_int();
@@ -949,7 +1002,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       int new_tidy_width = p_activityReplayFile.read_int();
       p_board_handling.settings.trace_pull_tight_region_width = new_tidy_width;
@@ -965,7 +1018,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       int int_value = p_activityReplayFile.read_int();
       p_board_handling.settings.push_enabled = int_value != 0;
@@ -981,7 +1034,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       int int_value = p_activityReplayFile.read_int();
       p_board_handling.settings.drag_components_enabled = int_value != 0;
@@ -997,10 +1050,10 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       int new_accuracy = p_activityReplayFile.read_int();
-      p_board_handling.settings.trace_pull_tight_accuracy = new_accuracy;
+      p_board_handling.settings.autoroute_settings.trace_pull_tight_accuracy = new_accuracy;
       return p_return_state;
     }
   }
@@ -1013,7 +1066,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       int int_value = p_activityReplayFile.read_int();
       p_board_handling.get_routing_board().change_conduction_is_obstacle(int_value == 0);
@@ -1029,7 +1082,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       int new_layer = p_activityReplayFile.read_int();
       p_board_handling.set_layer(new_layer);
@@ -1045,7 +1098,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       int new_clearance_type = p_activityReplayFile.read_int();
       p_board_handling.get_routing_board().search_tree_manager.set_clearance_compensation_used(new_clearance_type != 0);
@@ -1061,7 +1114,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       int layer = p_activityReplayFile.read_int();
       int half_width = p_activityReplayFile.read_int();
@@ -1078,7 +1131,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       int index = p_activityReplayFile.read_int();
       p_board_handling.settings.manual_trace_clearance_class = index;
@@ -1094,7 +1147,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       int manual_selection = p_activityReplayFile.read_int();
       p_board_handling.settings.manual_rule_selection = manual_selection != 0;
@@ -1110,7 +1163,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       int new_snap_angle_no = p_activityReplayFile.read_int();
       p_board_handling.get_routing_board().rules.set_trace_angle_restriction(AngleRestriction.valueOf(new_snap_angle_no));
@@ -1126,7 +1179,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       int new_value = p_activityReplayFile.read_int();
       p_board_handling.settings.select_on_all_visible_layers = (new_value != 0);
@@ -1142,7 +1195,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       int new_value = p_activityReplayFile.read_int();
       p_board_handling.settings.is_stitch_route = (new_value != 0);
@@ -1158,7 +1211,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       int item_type_no = p_activityReplayFile.read_int();
       int selection = p_activityReplayFile.read_int();
@@ -1187,7 +1240,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       p_board_handling.get_routing_board().undo(null);
       p_board_handling.repaint();
@@ -1203,7 +1256,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       p_board_handling.get_routing_board().redo(null);
       p_board_handling.repaint();
@@ -1219,7 +1272,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       p_board_handling.get_routing_board().generate_snapshot();
       return p_return_state;
@@ -1234,7 +1287,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       FloatPoint curr_location = p_activityReplayFile.read_corner();
       Point2D new_center = new Point2D.Double(curr_location.x, curr_location.y);
@@ -1251,7 +1304,7 @@ public abstract class ActivityReplayFileScope
     }
 
     @Override
-    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, BoardHandling p_board_handling)
+    public InteractiveState read_scope(ActivityReplayFile p_activityReplayFile, InteractiveState p_return_state, GuiBoardManager p_board_handling)
     {
       Point2D lower_left = p_board_handling.graphics_context.coordinate_transform.board_to_screen(p_activityReplayFile.read_corner());
       Point2D upper_right = p_board_handling.graphics_context.coordinate_transform.board_to_screen(p_activityReplayFile.read_corner());

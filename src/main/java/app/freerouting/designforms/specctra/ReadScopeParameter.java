@@ -3,23 +3,23 @@ package app.freerouting.designforms.specctra;
 import app.freerouting.board.AngleRestriction;
 import app.freerouting.board.BoardObservers;
 import app.freerouting.board.Communication;
-import app.freerouting.datastructures.IdNoGenerator;
-import app.freerouting.interactive.IBoardHandling;
+import app.freerouting.datastructures.IdentificationNumberGenerator;
+import app.freerouting.interactive.BoardManager;
+import app.freerouting.settings.RouterSettings;
 
 import java.util.Collection;
 import java.util.LinkedList;
 
 /**
- * Default parameter type used while reading a Specctra dsn-file.
+ * Helper class that contains some structured properties and helper functions for the DSN parser.
  */
 public class ReadScopeParameter
 {
-
   final IJFlexScanner scanner;
-  final IBoardHandling board_handling;
+  final BoardManager board_handling;
   final NetList netlist = new NetList();
   final BoardObservers observers;
-  final IdNoGenerator item_id_no_generator;
+  final IdentificationNumberGenerator item_id_no_generator;
   /**
    * Collection of elements of class PlaneInfo. The plane cannot be inserted directly into the
    * boards, because the layers may not be read completely.
@@ -64,14 +64,14 @@ public class ReadScopeParameter
    */
   CoordinateTransform coordinate_transform;
   LayerStructure layer_structure;
-  app.freerouting.interactive.AutorouteSettings autoroute_settings;
+  RouterSettings autoroute_settings;
   app.freerouting.board.Unit unit = app.freerouting.board.Unit.MIL;
   int resolution = 100; // default resolution
 
   /**
    * Creates a new instance of ReadScopeParameter
    */
-  ReadScopeParameter(IJFlexScanner p_scanner, IBoardHandling p_board_handling, BoardObservers p_observers, IdNoGenerator p_item_id_no_generator)
+  ReadScopeParameter(IJFlexScanner p_scanner, BoardManager p_board_handling, BoardObservers p_observers, IdentificationNumberGenerator p_item_id_no_generator)
   {
     scanner = p_scanner;
     board_handling = p_board_handling;

@@ -1,13 +1,13 @@
 package app.freerouting.designforms.specctra;
 
 import app.freerouting.board.*;
+import app.freerouting.core.BoardLibrary;
+import app.freerouting.core.Padstack;
 import app.freerouting.datastructures.IdentifierType;
 import app.freerouting.datastructures.IndentFileWriter;
 import app.freerouting.datastructures.UndoableObjects;
 import app.freerouting.datastructures.UndoableObjects.Storable;
 import app.freerouting.geometry.planar.*;
-import app.freerouting.library.BoardLibrary;
-import app.freerouting.library.Padstack;
 import app.freerouting.logger.FRLogger;
 import app.freerouting.rules.BoardRules;
 import app.freerouting.rules.ClearanceMatrix;
@@ -54,8 +54,11 @@ class Structure extends ScopeKeyword
     // write the control scope
     write_control_scope(p_par.board.rules, p_par.file);
 
-    // write the auto-route settings
-    AutorouteSettings.write_scope(p_par.file, p_par.autoroute_settings, p_par.board.layer_structure, p_par.identifier_type);
+    if (p_par.autoroute_settings != null)
+    {
+      // write the auto-route settings
+      AutorouteSettings.write_scope(p_par.file, p_par.autoroute_settings, p_par.board.layer_structure, p_par.identifier_type);
+    }
 
     // write the conduction areas
     write_conduction_areas(p_par);
@@ -86,7 +89,7 @@ class Structure extends ScopeKeyword
         // These conduction areas are written in the wiring scope.
         continue;
       }
-      Plane.write_scope(p_par, (ConductionArea) curr_ob);
+      Plane.write_scope(p_par, curr_area);
     }
   }
 
@@ -388,7 +391,7 @@ class Structure extends ScopeKeyword
         {
           for (; ; )
           {
-            p_scanner.yybegin(SpecctraDsnFileReader.NAME);
+            p_scanner.yybegin(SpecctraDsnStreamReader.NAME);
             next_token = p_scanner.next_token();
             if (next_token == Keyword.CLOSED_BRACKET)
             {
@@ -1072,6 +1075,7 @@ class Structure extends ScopeKeyword
       }
     }
 
+    // let's create a board based on the data we read (TODO: move this method somewhere outside of the designforms.specctra package)
     boolean result = true;
     if (p_par.board_handling.get_routing_board() == null)
     {

@@ -1,7 +1,9 @@
 package app.freerouting.logger;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class LogEntries
@@ -11,12 +13,18 @@ public class LogEntries
 
   public int getWarningCount()
   {
-    return (int) entries.stream().filter(e -> e.type == LogEntryType.Warning).count();
+    return (int) entries
+        .stream()
+        .filter(e -> e.type == LogEntryType.Warning)
+        .count();
   }
 
   public int getErrorCount()
   {
-    return (int) entries.stream().filter(e -> e.type == LogEntryType.Error).count();
+    return (int) entries
+        .stream()
+        .filter(e -> e.type == LogEntryType.Error)
+        .count();
   }
 
   public void clear()
@@ -26,33 +34,48 @@ public class LogEntries
 
   public String getAsString()
   {
-    return entries.stream().map(LogEntry::toString).collect(Collectors.joining("\n", "", "\n"));
+    return entries
+        .stream()
+        .map(LogEntry::toString)
+        .collect(Collectors.joining("\n", "", "\n"));
   }
 
   public String[] get()
   {
-    return entries.stream().map(LogEntry::toString).toArray(String[]::new);
+    return entries
+        .stream()
+        .map(LogEntry::toString)
+        .toArray(String[]::new);
   }
 
-  public LogEntry[] getEntries()
+  public LogEntry[] getEntries(Instant entriesSince, UUID topic)
   {
-    return entries.toArray(new LogEntry[0]);
+    return entries
+        .stream()
+        .filter(e -> ((entriesSince == null) || e.timestamp.isAfter(entriesSince)) && (topic == null || ((e.topic != null) && e.topic.equals(topic))))
+        .toArray(LogEntry[]::new);
   }
 
-  public void add(LogEntryType type, String message)
+  public LogEntry add(LogEntryType type, String message, UUID topic)
   {
-    this.add(type, message, null);
+    LogEntry logEntry = this.add(type, message, topic, null);
 
     // Raise the event
     for (LogEntryAddedListener listener : listeners)
     {
       listener.logEntryAdded(type, message);
     }
+
+    return logEntry;
   }
 
-  public void add(LogEntryType type, String message, Throwable exception)
+  public LogEntry add(LogEntryType type, String message, UUID topic, Throwable exception)
   {
-    entries.add(new LogEntry(type, message, exception));
+    LogEntry logEntry = new LogEntry(type, message, exception, topic);
+
+    entries.add(logEntry);
+
+    return logEntry;
   }
 
   public void addLogEntryAddedListener(LogEntryAddedListener listener)

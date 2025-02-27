@@ -26,7 +26,7 @@ public class RouteState extends InteractiveState
    * Creates a new instance of RouteState If p_logfile != null, the creation of the route is stored
    * in the logfile.
    */
-  protected RouteState(InteractiveState p_parent_state, BoardHandling p_board_handling, ActivityReplayFile p_activityReplayFile)
+  protected RouteState(InteractiveState p_parent_state, GuiBoardManager p_board_handling, ActivityReplayFile p_activityReplayFile)
   {
     super(p_parent_state, p_board_handling, p_activityReplayFile);
   }
@@ -35,7 +35,7 @@ public class RouteState extends InteractiveState
    * Returns a new instance of this class or null, if starting a new route was not possible at
    * p_location. If p_logfile != null, the creation of the route is stored in the logfile.
    */
-  public static RouteState get_instance(FloatPoint p_location, InteractiveState p_parent_state, BoardHandling p_board_handling, ActivityReplayFile p_activityReplayFile)
+  public static RouteState get_instance(FloatPoint p_location, InteractiveState p_parent_state, GuiBoardManager p_board_handling, ActivityReplayFile p_activityReplayFile)
   {
     if (!(p_parent_state instanceof MenuState))
     {
@@ -150,7 +150,7 @@ public class RouteState extends InteractiveState
     }
     new_instance.routing_target_set = picked_item.get_unconnected_set(-1);
 
-    new_instance.route = new Route(location, p_board_handling.settings.layer, trace_half_widths, layer_active_arr, route_net_no_arr, trace_clearance_class, p_board_handling.get_via_rule(route_net_no_arr[0]), p_board_handling.settings.push_enabled, p_board_handling.settings.trace_pull_tight_region_width, p_board_handling.settings.trace_pull_tight_accuracy, picked_item, new_instance.routing_target_set, routing_board, is_stitch_route, p_board_handling.settings.automatic_neckdown, p_board_handling.settings.via_snap_to_smd_center, p_board_handling.settings.hilight_routing_obstacle);
+    new_instance.route = new Route(location, p_board_handling.settings.layer, trace_half_widths, layer_active_arr, route_net_no_arr, trace_clearance_class, p_board_handling.get_via_rule(route_net_no_arr[0]), p_board_handling.settings.push_enabled, p_board_handling.settings.trace_pull_tight_region_width, p_board_handling.settings.autoroute_settings.trace_pull_tight_accuracy, picked_item, new_instance.routing_target_set, routing_board, is_stitch_route, p_board_handling.settings.autoroute_settings.get_automatic_neckdown(), p_board_handling.settings.via_snap_to_smd_center, p_board_handling.settings.hilight_routing_obstacle);
     new_instance.observers_activated = !routing_board.observers_active();
     if (new_instance.observers_activated)
     {
@@ -170,7 +170,7 @@ public class RouteState extends InteractiveState
    * Checks starting an interactive route at p_location. Returns the picked start item of the
    * routing at p_location, or null, if no such item was found.
    */
-  protected static Item start_ok(IntPoint p_location, BoardHandling p_hdlg)
+  protected static Item start_ok(IntPoint p_location, GuiBoardManager p_hdlg)
   {
     RoutingBoard routing_board = p_hdlg.get_routing_board();
 
@@ -222,7 +222,7 @@ public class RouteState extends InteractiveState
     return picked_item;
   }
 
-  private static Item pick_routing_item(IntPoint p_location, int p_layer_no, BoardHandling p_hdlg)
+  private static Item pick_routing_item(IntPoint p_location, int p_layer_no, GuiBoardManager p_hdlg)
   {
 
     if (p_layer_no == p_hdlg.settings.layer || (p_hdlg.graphics_context.get_layer_visibility(p_layer_no) <= 0))
@@ -383,7 +383,7 @@ public class RouteState extends InteractiveState
       Collection<Item> remove_items = tail.get_connection_items(Item.StopConnectionOption.VIA);
       if (hdlg.settings.push_enabled)
       {
-        hdlg.get_routing_board().remove_items_and_pull_tight(remove_items, hdlg.settings.trace_pull_tight_region_width, hdlg.settings.trace_pull_tight_accuracy);
+        hdlg.get_routing_board().remove_items_and_pull_tight(remove_items, hdlg.settings.trace_pull_tight_region_width, hdlg.settings.autoroute_settings.trace_pull_tight_accuracy);
       }
       else
       {

@@ -10,17 +10,19 @@ import app.freerouting.datastructures.TimeLimit;
 import app.freerouting.datastructures.UndoableObjects;
 import app.freerouting.geometry.planar.Vector;
 import app.freerouting.geometry.planar.*;
-import app.freerouting.interactive.Settings;
+import app.freerouting.interactive.RatsNest;
 import app.freerouting.logger.FRLogger;
 import app.freerouting.rules.BoardRules;
 import app.freerouting.rules.Net;
 import app.freerouting.rules.ViaInfo;
+import app.freerouting.settings.RouterSettings;
 
-import java.io.Serializable;
+import java.io.*;
 import java.util.*;
 
 /**
- * Contains higher level functions of a board
+ * The class that represents the board that is being routed.
+ * It contains all the data for the board and the methods to manipulate it.
  */
 public class RoutingBoard extends BasicBoard implements Serializable
 {
@@ -322,7 +324,9 @@ public class RoutingBoard extends BasicBoard implements Serializable
     // the connected items must remain connected after moving
     if (p_item instanceof Connectable)
     {
-      contact_count = p_item.get_all_contacts().size();
+      contact_count = p_item
+          .get_all_contacts()
+          .size();
     }
     if (p_item instanceof Trace && contact_count > 0)
     {
@@ -334,7 +338,9 @@ public class RoutingBoard extends BasicBoard implements Serializable
     }
     for (int i = 0; i < p_item.tile_shape_count(); ++i)
     {
-      TileShape moved_shape = (TileShape) p_item.get_tile_shape(i).translate_by(p_vector);
+      TileShape moved_shape = (TileShape) p_item
+          .get_tile_shape(i)
+          .translate_by(p_vector);
       if (!moved_shape.is_contained_in(bounding_box))
       {
         return false;
@@ -470,7 +476,9 @@ public class RoutingBoard extends BasicBoard implements Serializable
             continue; // prefer drill items
           }
           int trace_radius = curr_trace.get_half_width();
-          curr_dist = curr_trace.polyline().distance(pick_location);
+          curr_dist = curr_trace
+              .polyline()
+              .distance(pick_location);
           if (curr_dist < min_dist && curr_dist <= trace_radius)
           {
             candidate_found = true;
@@ -481,7 +489,9 @@ public class RoutingBoard extends BasicBoard implements Serializable
       {
         if (p_layer < 0 || curr_drill_item.is_on_layer(p_layer))
         {
-          FloatPoint drill_item_center = curr_drill_item.get_center().to_float();
+          FloatPoint drill_item_center = curr_drill_item
+              .get_center()
+              .to_float();
           curr_dist = drill_item_center.distance(pick_location);
           if (curr_dist < min_dist || nearest_item instanceof Trace)
           {
@@ -533,7 +543,9 @@ public class RoutingBoard extends BasicBoard implements Serializable
       IntOctagon tidy_clip_shape;
       if (p_tidy_width < Integer.MAX_VALUE)
       {
-        tidy_clip_shape = p_location.surrounding_octagon().enlarge(p_tidy_width);
+        tidy_clip_shape = p_location
+            .surrounding_octagon()
+            .enlarge(p_tidy_width);
       }
       else
       {
@@ -641,7 +653,9 @@ public class RoutingBoard extends BasicBoard implements Serializable
     Set<Item> picked_items = this.pick_items(from_corner, p_layer, filter);
     if (picked_items.size() == 1)
     {
-      Trace curr_picked_trace = (Trace) picked_items.iterator().next();
+      Trace curr_picked_trace = (Trace) picked_items
+          .iterator()
+          .next();
       if (curr_picked_trace.nets_equal(p_net_no_arr) && curr_picked_trace.get_half_width() == p_half_width && curr_picked_trace.clearance_class_no() == p_clearance_class_no && (curr_picked_trace instanceof PolylineTrace))
       {
         // can combine  with the picked trace
@@ -772,7 +786,9 @@ public class RoutingBoard extends BasicBoard implements Serializable
     IntOctagon tidy_region = null;
     if (p_tidy_width < Integer.MAX_VALUE)
     {
-      tidy_region = new_corner.surrounding_octagon().enlarge(p_tidy_width);
+      tidy_region = new_corner
+          .surrounding_octagon()
+          .enlarge(p_tidy_width);
     }
     int[] opt_net_no_arr;
     if (p_max_recursion_depth <= 0)
@@ -798,7 +814,9 @@ public class RoutingBoard extends BasicBoard implements Serializable
         new_trace = null;
         if (!curr_picked_items.isEmpty())
         {
-          Item found_trace = curr_picked_items.iterator().next();
+          Item found_trace = curr_picked_items
+              .iterator()
+              .next();
           if (found_trace instanceof PolylineTrace)
           {
             new_trace = (PolylineTrace) found_trace;
@@ -849,7 +867,7 @@ public class RoutingBoard extends BasicBoard implements Serializable
    * Routes automatically p_item to another item of the same net, to which it is not yet
    * electrically connected. Returns an enum of type AutorouteEngine.AutorouteResult
    */
-  public AutorouteEngine.AutorouteResult autoroute(Item p_item, Settings p_settings, int p_via_costs, Stoppable p_stoppable_thread, TimeLimit p_time_limit)
+  public AutorouteEngine.AutorouteResult autoroute(Item p_item, RouterSettings routerSettings, int p_via_costs, Stoppable p_stoppable_thread, TimeLimit p_time_limit)
   {
     if (!(p_item instanceof Connectable) || p_item.net_count() == 0)
     {
@@ -860,7 +878,7 @@ public class RoutingBoard extends BasicBoard implements Serializable
       FRLogger.warn("RoutingBoard.autoroute: net_count > 1 not yet implemented");
     }
     int route_net_no = p_item.get_net_no(0);
-    AutorouteControl ctrl_settings = new AutorouteControl(this, route_net_no, p_settings, p_via_costs, p_settings.autoroute_settings.get_trace_cost_arr());
+    AutorouteControl ctrl_settings = new AutorouteControl(this, route_net_no, routerSettings, p_via_costs, routerSettings.get_trace_cost_arr());
     ctrl_settings.remove_unconnected_vias = false;
     Set<Item> route_start_set = p_item.get_connected_set(route_net_no);
     Net route_net = rules.nets.get(route_net_no);
@@ -885,7 +903,7 @@ public class RoutingBoard extends BasicBoard implements Serializable
     if (result == AutorouteEngine.AutorouteResult.ROUTED)
     {
       final int time_limit_to_prevent_endless_loop = 1000;
-      opt_changed_area(new int[0], null, p_settings.get_trace_pull_tight_accuracy(), ctrl_settings.trace_costs, p_stoppable_thread, time_limit_to_prevent_endless_loop);
+      opt_changed_area(new int[0], null, routerSettings.trace_pull_tight_accuracy, ctrl_settings.trace_costs, p_stoppable_thread, time_limit_to_prevent_endless_loop);
     }
     return result;
   }
@@ -895,7 +913,7 @@ public class RoutingBoard extends BasicBoard implements Serializable
    * only 1 layer. Ripup is allowed if p_ripup_costs is {@literal >}= 0. Returns an enum of type
    * AutorouteEngine.AutorouteResult
    */
-  public AutorouteEngine.AutorouteResult fanout(Pin p_pin, Settings p_settings, int p_ripup_costs, Stoppable p_stoppable_thread, TimeLimit p_time_limit)
+  public AutorouteEngine.AutorouteResult fanout(Pin p_pin, RouterSettings routerSettings, int p_ripup_costs, Stoppable p_stoppable_thread, TimeLimit p_time_limit)
   {
     if (p_pin.first_layer() != p_pin.last_layer() || p_pin.net_count() != 1)
     {
@@ -916,7 +934,7 @@ public class RoutingBoard extends BasicBoard implements Serializable
     {
       return AutorouteEngine.AutorouteResult.ALREADY_CONNECTED;
     }
-    AutorouteControl ctrl_settings = new AutorouteControl(this, pin_net_no, p_settings);
+    AutorouteControl ctrl_settings = new AutorouteControl(this, pin_net_no, routerSettings);
     ctrl_settings.is_fanout = true;
     ctrl_settings.remove_unconnected_vias = false;
     if (p_ripup_costs >= 0)
@@ -930,7 +948,7 @@ public class RoutingBoard extends BasicBoard implements Serializable
     if (result == AutorouteEngine.AutorouteResult.ROUTED)
     {
       final int time_limit_to_prevent_endless_loop = 1000;
-      opt_changed_area(new int[0], null, p_settings.get_trace_pull_tight_accuracy(), ctrl_settings.trace_costs, p_stoppable_thread, time_limit_to_prevent_endless_loop);
+      opt_changed_area(new int[0], null, routerSettings.trace_pull_tight_accuracy, ctrl_settings.trace_costs, p_stoppable_thread, time_limit_to_prevent_endless_loop);
     }
     return result;
   }
@@ -952,12 +970,16 @@ public class RoutingBoard extends BasicBoard implements Serializable
     {
       return false; // not yet implemented
     }
-    if (to_trace.polyline().contains(p_from_point))
+    if (to_trace
+        .polyline()
+        .contains(p_from_point))
     {
       // no connection line necessary
       return true;
     }
-    LineSegment projection_line = to_trace.polyline().projection_line(p_from_point);
+    LineSegment projection_line = to_trace
+        .polyline()
+        .projection_line(p_from_point);
     if (projection_line == null)
     {
       return false;
@@ -1067,7 +1089,9 @@ public class RoutingBoard extends BasicBoard implements Serializable
     SortedSet<Item> stub_connections = new TreeSet<>();
     for (Item curr_item : stub_set)
     {
-      int item_contact_count = curr_item.get_normal_contacts().size();
+      int item_contact_count = curr_item
+          .get_normal_contacts()
+          .size();
       if (item_contact_count == 1)
       {
         stub_connections.addAll(curr_item.get_connection_items(p_stop_connection_option));
@@ -1289,6 +1313,137 @@ public class RoutingBoard extends BasicBoard implements Serializable
     else
     {
       this.autoroute_engine = null;
+    }
+  }
+
+  public BoardStatistics get_statistics()
+  {
+    BoardStatistics statistics = new BoardStatistics();
+
+    Iterator<UndoableObjects.UndoableObjectNode> it = item_list.start_read_object();
+    for (; ; )
+    {
+      Item curr_item = (Item) item_list.read_object(it);
+      if (curr_item == null)
+      {
+        break;
+      }
+      if (curr_item instanceof Trace)
+      {
+        statistics.traceCount++;
+      }
+      else if (curr_item instanceof Via)
+      {
+        statistics.viaCount++;
+      }
+      else if (curr_item instanceof ConductionArea)
+      {
+        statistics.conductionAreaCount++;
+      }
+      else if (curr_item instanceof DrillItem)
+      {
+        statistics.drillItemCount++;
+      }
+      else if (curr_item instanceof Pin)
+      {
+        statistics.pinCount++;
+      }
+      else if (curr_item instanceof ComponentOutline)
+      {
+        statistics.componentOutlineCount++;
+      }
+      else
+      {
+        statistics.otherCount++;
+      }
+    }
+
+    statistics.totalTraceLength = this.cumulative_trace_length();
+    statistics.weightedTraceLength = this.calc_weighted_trace_length();
+    statistics.incompleteItemCount = new RatsNest(this).incomplete_count();
+
+    return statistics;
+  }
+
+  /**
+   * Calculates the cumulative trace lengths multiplied by the trace radius of all traces on the board, which are not shove_fixed.
+   */
+  protected double calc_weighted_trace_length()
+  {
+    double result = 0;
+    int default_clearance_class = BoardRules.default_clearance_class();
+    Iterator<UndoableObjects.UndoableObjectNode> it = this.item_list.start_read_object();
+    for (; ; )
+    {
+      UndoableObjects.Storable curr_item = this.item_list.read_object(it);
+      if (curr_item == null)
+      {
+        break;
+      }
+      if (curr_item instanceof Trace curr_trace)
+      {
+        FixedState fixed_state = curr_trace.get_fixed_state();
+        if (fixed_state == FixedState.NOT_FIXED || fixed_state == FixedState.SHOVE_FIXED)
+        {
+          double weighted_trace_length = curr_trace.get_length() * (curr_trace.get_half_width() + this.clearance_value(curr_trace.clearance_class_no(), default_clearance_class, curr_trace.get_layer()));
+          if (fixed_state == FixedState.SHOVE_FIXED)
+          {
+            // to produce less violations with pin exit directions.
+            weighted_trace_length /= 2;
+          }
+          result += weighted_trace_length;
+        }
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Create a deep copy of the routing board.
+   * TODO: check if this method is the same as the BasicBoard.clone method
+   */
+  public synchronized RoutingBoard deepCopy()
+  {
+    ObjectOutputStream oos = null;
+    ObjectInputStream ois = null;
+
+    try
+    {
+      ByteArrayOutputStream bos = new ByteArrayOutputStream();
+      oos = new ObjectOutputStream(bos);
+
+      oos.writeObject(this); // serialize this.board
+      oos.flush();
+
+      ByteArrayInputStream bin = new ByteArrayInputStream(bos.toByteArray());
+      ois = new ObjectInputStream(bin);
+
+      RoutingBoard board_copy = (RoutingBoard) ois.readObject();
+
+      // board_copy.clear_autoroute_database();
+      board_copy.clear_all_item_temporary_autoroute_data();
+      board_copy.finish_autoroute();
+
+      return board_copy;
+    } catch (Exception e)
+    {
+      FRLogger.error("Exception in deep_copy_routing_board" + e, e);
+      return null;
+    } finally
+    {
+      try
+      {
+        if (oos != null)
+        {
+          oos.close();
+        }
+        if (ois != null)
+        {
+          ois.close();
+        }
+      } catch (Exception e)
+      {
+      }
     }
   }
 }

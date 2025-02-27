@@ -1,14 +1,22 @@
 package app.freerouting.gui;
 
+import app.freerouting.Freerouting;
 import app.freerouting.board.RoutingBoard;
 import app.freerouting.board.Unit;
 import app.freerouting.interactive.*;
-import app.freerouting.management.FRAnalytics;
+import app.freerouting.logger.FRLogger;
+import app.freerouting.management.RoutingJobScheduler;
+import app.freerouting.management.SessionManager;
 import app.freerouting.management.TextManager;
+import app.freerouting.management.analytics.FRAnalytics;
+import app.freerouting.management.gson.GsonProvider;
 
 import javax.swing.*;
 import javax.swing.border.BevelBorder;
 import java.awt.*;
+import java.util.Arrays;
+
+import static app.freerouting.Freerouting.globalSettings;
 
 /**
  * Implements the toolbar panel of the board frame.
@@ -102,7 +110,23 @@ class BoardToolbar extends JPanel
     toolbar_autoroute_button.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
     toolbar_autoroute_button.addActionListener(evt ->
     {
-      InteractiveActionThread thread = board_frame.board_panel.board_handling.start_autorouter_and_route_optimizer();
+      var routingJobs = RoutingJobScheduler
+          .getInstance()
+          .listJobs(SessionManager
+              .getInstance()
+              .getGuiSession().id.toString());
+      if (routingJobs.length == 0)
+      {
+        FRLogger.warn("No routing job found for the current session");
+        return;
+      }
+
+      var guiRoutingJob = Arrays
+          .stream(routingJobs)
+          .findFirst()
+          .get();
+      guiRoutingJob.routerSettings = Freerouting.globalSettings.routerSettings.clone();
+      InteractiveActionThread thread = board_frame.board_panel.board_handling.start_autorouter_and_route_optimizer(guiRoutingJob);
 
       if ((thread != null) && (board_frame.board_panel.board_handling.autorouter_listener != null))
       {
@@ -110,7 +134,7 @@ class BoardToolbar extends JPanel
         thread.addListener(board_frame.board_panel.board_handling.autorouter_listener);
       }
     });
-    toolbar_autoroute_button.addActionListener(evt -> FRAnalytics.buttonClicked("toolbar_autoroute_button", toolbar_autoroute_button.getText()));
+    toolbar_autoroute_button.addActionListener(evt -> FRAnalytics.buttonClicked("toolbar_autoroute_button", GsonProvider.GSON.toJson(globalSettings)));
     middle_toolbar.add(toolbar_autoroute_button);
 
     // Add "Cancel" button to the toolbar
@@ -133,11 +157,13 @@ class BoardToolbar extends JPanel
       // delete all tracks and vias
       board.delete_all_tracks_and_vias();
       // update the board
-      board_frame.board_panel.board_handling.update_routing_board(board);
+      board_frame.board_panel.board_handling.replaceRoutingBoard(board);
       // create a deep copy of the routing board
-      board = board_frame.board_panel.board_handling.deep_copy_routing_board();
+      board = board_frame.board_panel.board_handling
+          .get_routing_board()
+          .deepCopy();
       // update the board again
-      board_frame.board_panel.board_handling.update_routing_board(board);
+      board_frame.board_panel.board_handling.replaceRoutingBoard(board);
       // create ratsnest
       board_frame.board_panel.board_handling.create_ratsnest();
       // redraw the board

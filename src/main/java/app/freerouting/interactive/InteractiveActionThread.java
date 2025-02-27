@@ -1,8 +1,10 @@
 package app.freerouting.interactive;
 
-import app.freerouting.datastructures.Stoppable;
+import app.freerouting.core.RoutingJob;
+import app.freerouting.core.StoppableThread;
 import app.freerouting.logger.FRLogger;
 import app.freerouting.management.TextManager;
+import app.freerouting.settings.GlobalSettings;
 
 import java.awt.*;
 import java.io.IOException;
@@ -10,47 +12,85 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+import static app.freerouting.Freerouting.globalSettings;
+
 /**
  * Used for running an interactive action in a separate thread, that can be stopped by the user.
+ * This typically represents an action that is triggered by the user on the GUI, such as autorouting, fanout, etc.
  */
-public abstract class InteractiveActionThread extends Thread implements Stoppable
+public abstract class InteractiveActionThread extends StoppableThread
 {
-  public final BoardHandling hdlg;
+  public final GuiBoardManager boardManager;
+  protected final RoutingJob routingJob;
   protected List<ThreadActionListener> listeners = new ArrayList<>();
-  private boolean stop_requested = false;
-  private boolean stop_auto_router = false;
 
   /**
    * Creates a new instance of InteractiveActionThread
    */
-  protected InteractiveActionThread(BoardHandling p_board_handling)
+  protected InteractiveActionThread(GuiBoardManager boardManager, RoutingJob job)
   {
-    this.hdlg = p_board_handling;
+    this.boardManager = boardManager;
+    this.routingJob = job;
   }
 
-  public static InteractiveActionThread get_autoroute_instance(BoardHandling p_board_handling)
+  public static InteractiveActionThread get_autoroute_instance(GuiBoardManager boardManager, RoutingJob job)
   {
-    return new AutorouteThread(p_board_handling);
+    return new AutorouteThread(boardManager, job);
   }
 
-  public static InteractiveActionThread get_autorouter_and_route_optimizer_instance(BoardHandling p_board_handling)
+  public static InteractiveActionThread get_autorouter_and_route_optimizer_instance(GuiBoardManager boardManager, RoutingJob job)
   {
-    return new AutorouterAndRouteOptimizerThread(p_board_handling);
+    // TODO: we need to clone the settings here for now, because the GUI modifies the settings of the boardmanager (but this should be eliminated in the future)
+    job.routerSettings = boardManager.settings.autoroute_settings.clone();
+
+    var routerThread = new AutorouterAndRouteOptimizerThread(boardManager, job);
+    routerThread.addListener(new ThreadActionListener()
+    {
+      @Override
+      public void autorouterStarted()
+      {
+      }
+
+      @Override
+      public void autorouterAborted()
+      {
+      }
+
+      @Override
+      public void autorouterFinished()
+      {
+        try
+        {
+          GlobalSettings.saveAsJson(globalSettings);
+        } catch (IOException e)
+        {
+          FRLogger.warn("InteractiveActionThread: unable to save global settings");
+        }
+
+        // Show the user settings dialog after auto-routing is finished if the number of completed jobs is greater than 5 and the user has not yet set their email address
+        if ((globalSettings.statistics.jobsCompleted >= 5) && globalSettings.userProfileSettings.userEmail.isEmpty())
+        {
+          boardManager.get_panel().board_frame.menubar.showProfileDialog();
+        }
+      }
+    });
+
+    return routerThread;
   }
 
-  public static InteractiveActionThread get_fanout_instance(BoardHandling p_board_handling)
+  public static InteractiveActionThread get_fanout_instance(GuiBoardManager boardManager, RoutingJob job)
   {
-    return new FanoutThread(p_board_handling);
+    return new FanoutThread(boardManager, job);
   }
 
-  public static InteractiveActionThread get_pull_tight_instance(BoardHandling p_board_handling)
+  public static InteractiveActionThread get_pull_tight_instance(GuiBoardManager boardManager, RoutingJob job)
   {
-    return new PullTightThread(p_board_handling);
+    return new PullTightThread(boardManager, job);
   }
 
-  public static InteractiveActionThread get_read_logfile_instance(BoardHandling p_board_handling, InputStream p_input_stream)
+  public static InteractiveActionThread get_read_logfile_instance(GuiBoardManager boardManager, RoutingJob job, InputStream p_input_stream)
   {
-    return new ReadLogfileThread(p_board_handling, p_input_stream);
+    return new ReadLogfileThread(boardManager, job, p_input_stream);
   }
 
   public void addListener(ThreadActionListener toAdd)
@@ -58,35 +98,11 @@ public abstract class InteractiveActionThread extends Thread implements Stoppabl
     listeners.add(toAdd);
   }
 
-  protected abstract void thread_action();
-
   @Override
   public void run()
   {
     thread_action();
-    hdlg.repaint();
-  }
-
-  @Override
-  public synchronized void request_stop()
-  {
-    stop_requested = true;
-  }
-
-  @Override
-  public synchronized boolean is_stop_requested()
-  {
-    return stop_requested;
-  }
-
-  public synchronized void request_stop_auto_router()
-  {
-    stop_auto_router = true;
-  }
-
-  public synchronized boolean is_stop_auto_router_requested()
-  {
-    return stop_auto_router;
+    boardManager.repaint();
   }
 
   public synchronized void draw(Graphics p_graphics)
@@ -97,60 +113,60 @@ public abstract class InteractiveActionThread extends Thread implements Stoppabl
   private static class AutorouteThread extends InteractiveActionThread
   {
 
-    private AutorouteThread(BoardHandling p_board_handling)
+    private AutorouteThread(GuiBoardManager p_board_handling, RoutingJob job)
     {
-      super(p_board_handling);
+      super(p_board_handling, job);
     }
 
     @Override
     protected void thread_action()
     {
-      if (!(hdlg.interactive_state instanceof SelectedItemState))
+      if (!(boardManager.interactive_state instanceof SelectedItemState))
       {
         return;
       }
-      InteractiveState return_state = ((SelectedItemState) hdlg.interactive_state).autoroute(this);
-      hdlg.set_interactive_state(return_state);
+      InteractiveState return_state = ((SelectedItemState) boardManager.interactive_state).autoroute(this);
+      boardManager.set_interactive_state(return_state);
     }
   }
 
   private static class FanoutThread extends InteractiveActionThread
   {
 
-    private FanoutThread(BoardHandling p_board_handling)
+    private FanoutThread(GuiBoardManager p_board_handling, RoutingJob job)
     {
-      super(p_board_handling);
+      super(p_board_handling, job);
     }
 
     @Override
     protected void thread_action()
     {
-      if (!(hdlg.interactive_state instanceof SelectedItemState))
+      if (!(boardManager.interactive_state instanceof SelectedItemState))
       {
         return;
       }
-      InteractiveState return_state = ((SelectedItemState) hdlg.interactive_state).fanout(this);
-      hdlg.set_interactive_state(return_state);
+      InteractiveState return_state = ((SelectedItemState) boardManager.interactive_state).fanout(this);
+      boardManager.set_interactive_state(return_state);
     }
   }
 
   private static class PullTightThread extends InteractiveActionThread
   {
 
-    private PullTightThread(BoardHandling p_board_handling)
+    private PullTightThread(GuiBoardManager p_board_handling, RoutingJob job)
     {
-      super(p_board_handling);
+      super(p_board_handling, job);
     }
 
     @Override
     protected void thread_action()
     {
-      if (!(hdlg.interactive_state instanceof SelectedItemState))
+      if (!(boardManager.interactive_state instanceof SelectedItemState))
       {
         return;
       }
-      InteractiveState return_state = ((SelectedItemState) hdlg.interactive_state).pull_tight(this);
-      hdlg.set_interactive_state(return_state);
+      InteractiveState return_state = ((SelectedItemState) boardManager.interactive_state).pull_tight(this);
+      boardManager.set_interactive_state(return_state);
     }
   }
 
@@ -159,42 +175,41 @@ public abstract class InteractiveActionThread extends Thread implements Stoppabl
 
     private final InputStream input_stream;
 
-    private ReadLogfileThread(BoardHandling p_board_handling, InputStream p_input_stream)
+    private ReadLogfileThread(GuiBoardManager p_board_handling, RoutingJob job, InputStream p_input_stream)
     {
-      super(p_board_handling);
+      super(p_board_handling, job);
       this.input_stream = p_input_stream;
     }
 
     @Override
     protected void thread_action()
     {
+      TextManager tm = new TextManager(InteractiveState.class, boardManager.get_locale());
 
-      TextManager tm = new TextManager(InteractiveState.class, hdlg.get_locale());
-
-      boolean saved_board_read_only = hdlg.is_board_read_only();
-      hdlg.set_board_read_only(true);
+      boolean saved_board_read_only = boardManager.is_board_read_only();
+      boardManager.set_board_read_only(true);
       String start_message = tm.getText("logfile") + " " + tm.getText("stop_message");
-      hdlg.screen_messages.set_status_message(start_message);
-      hdlg.screen_messages.set_write_protected(true);
+      boardManager.screen_messages.set_status_message(start_message);
+      boardManager.screen_messages.set_write_protected(true);
       boolean done = false;
-      InteractiveState previous_state = hdlg.interactive_state;
-      if (!hdlg.activityReplayFile.start_read(this.input_stream))
+      InteractiveState previous_state = boardManager.interactive_state;
+      if (!boardManager.activityReplayFile.start_read(this.input_stream))
       {
         done = true;
       }
       boolean interrupted = false;
       int debug_counter = 0;
-      hdlg.get_panel().board_frame.refresh_windows();
-      hdlg.paint_immediately = true;
+      boardManager.get_panel().board_frame.refresh_windows();
+      boardManager.paint_immediately = true;
       while (!done)
       {
-        if (is_stop_requested())
+        if (isStopRequested())
         {
           interrupted = true;
           done = true;
         }
         ++debug_counter;
-        ActivityReplayFileScope logfile_scope = hdlg.activityReplayFile.start_read_scope();
+        ActivityReplayFileScope logfile_scope = boardManager.activityReplayFile.start_read_scope();
         if (logfile_scope == null)
         {
           done = true; // end of logfile
@@ -203,21 +218,21 @@ public abstract class InteractiveActionThread extends Thread implements Stoppabl
         {
           try
           {
-            InteractiveState new_state = logfile_scope.read_scope(hdlg.activityReplayFile, hdlg.interactive_state, hdlg);
+            InteractiveState new_state = logfile_scope.read_scope(boardManager.activityReplayFile, boardManager.interactive_state, boardManager);
             if (new_state == null)
             {
               FRLogger.warn("BoardHandling:read_logfile: inconsistent logfile scope");
               new_state = previous_state;
             }
-            hdlg.repaint();
-            hdlg.set_interactive_state(new_state);
+            boardManager.repaint();
+            boardManager.set_interactive_state(new_state);
           } catch (Exception e)
           {
             done = true;
           }
         }
       }
-      hdlg.paint_immediately = false;
+      boardManager.paint_immediately = false;
       try
       {
         this.input_stream.close();
@@ -225,8 +240,8 @@ public abstract class InteractiveActionThread extends Thread implements Stoppabl
       {
         FRLogger.error("ReadLogfileThread: unable to close input stream", e);
       }
-      hdlg.get_panel().board_frame.refresh_windows();
-      hdlg.screen_messages.set_write_protected(false);
+      boardManager.get_panel().board_frame.refresh_windows();
+      boardManager.screen_messages.set_write_protected(false);
       String curr_message;
       if (interrupted)
       {
@@ -237,9 +252,9 @@ public abstract class InteractiveActionThread extends Thread implements Stoppabl
         curr_message = tm.getText("completed");
       }
       String end_message = tm.getText("logfile") + " " + curr_message;
-      hdlg.screen_messages.set_status_message(end_message);
-      hdlg.set_board_read_only(saved_board_read_only);
-      hdlg.get_panel().board_frame.repaint_all();
+      boardManager.screen_messages.set_status_message(end_message);
+      boardManager.set_board_read_only(saved_board_read_only);
+      boardManager.get_panel().board_frame.repaint_all();
     }
   }
 }

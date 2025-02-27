@@ -2,11 +2,12 @@ package app.freerouting.designforms.specctra;
 
 import app.freerouting.board.AngleRestriction;
 import app.freerouting.board.BasicBoard;
+import app.freerouting.core.Padstack;
 import app.freerouting.datastructures.IndentFileWriter;
-import app.freerouting.interactive.BoardHandling;
-import app.freerouting.library.Padstack;
+import app.freerouting.interactive.GuiBoardManager;
 import app.freerouting.logger.FRLogger;
 import app.freerouting.rules.ViaInfo;
+import app.freerouting.settings.RouterSettings;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,7 +21,7 @@ import java.util.Collection;
 public class RulesFile
 {
 
-  public static void write(BoardHandling p_board_handling, OutputStream p_output_stream, String p_design_name)
+  public static void write(GuiBoardManager p_board_handling, OutputStream p_output_stream, String p_design_name)
   {
     IndentFileWriter output_file = new IndentFileWriter(p_output_stream);
     BasicBoard routing_board = p_board_handling.get_routing_board();
@@ -41,10 +42,10 @@ public class RulesFile
     }
   }
 
-  public static boolean read(InputStream p_input_stream, String p_design_name, BoardHandling p_board_handling)
+  public static boolean read(InputStream p_input_stream, String p_design_name, GuiBoardManager p_board_handling)
   {
     BasicBoard routing_board = p_board_handling.get_routing_board();
-    IJFlexScanner scanner = new SpecctraDsnFileReader(p_input_stream);
+    IJFlexScanner scanner = new SpecctraDsnStreamReader(p_input_stream);
     try
     {
       Object curr_token = scanner.next_token();
@@ -65,7 +66,7 @@ public class RulesFile
         FRLogger.warn("RulesFile.read: keyword pcb expected at '" + scanner.get_scope_identifier() + "'");
         return false;
       }
-      scanner.yybegin(SpecctraDsnFileReader.NAME);
+      scanner.yybegin(SpecctraDsnStreamReader.NAME);
       curr_token = scanner.next_token();
       if (!(curr_token instanceof String) || !curr_token.equals(p_design_name))
       {
@@ -137,7 +138,7 @@ public class RulesFile
         }
         else if (next_token == Keyword.AUTOROUTE_SETTINGS)
         {
-          app.freerouting.interactive.AutorouteSettings autoroute_settings = AutorouteSettings.read_scope(scanner, layer_structure);
+          RouterSettings autoroute_settings = AutorouteSettings.read_scope(scanner, layer_structure);
           if (autoroute_settings != null)
           {
             p_board_handling.settings.autoroute_settings = autoroute_settings;
@@ -162,7 +163,10 @@ public class RulesFile
     p_par.file.write("rules PCB ");
     p_par.file.write(p_design_name);
     Structure.write_snap_angle(p_par.file, p_par.board.rules.get_trace_angle_restriction());
-    AutorouteSettings.write_scope(p_par.file, p_par.autoroute_settings, p_par.board.layer_structure, p_par.identifier_type);
+    if (p_par.autoroute_settings != null)
+    {
+      AutorouteSettings.write_scope(p_par.file, p_par.autoroute_settings, p_par.board.layer_structure, p_par.identifier_type);
+    }
     // write the default rule using 0 as default layer.
     Rule.write_default_rule(p_par, 0);
     // write the via padstacks

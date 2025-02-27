@@ -28,13 +28,13 @@ public class ExpandTestState extends InteractiveState
   /**
    * Creates a new instance of ExpandTestState
    */
-  private ExpandTestState(FloatPoint p_location, InteractiveState p_return_state, BoardHandling p_board_handling)
+  private ExpandTestState(FloatPoint p_location, InteractiveState p_return_state, GuiBoardManager p_board_handling)
   {
     super(p_return_state, p_board_handling, null);
     init(p_location);
   }
 
-  public static ExpandTestState get_instance(FloatPoint p_location, InteractiveState p_return_state, BoardHandling p_board_handling)
+  public static ExpandTestState get_instance(FloatPoint p_location, InteractiveState p_return_state, GuiBoardManager p_board_handling)
   {
     return new ExpandTestState(p_location, p_return_state, p_board_handling);
   }
@@ -180,7 +180,7 @@ public class ExpandTestState extends InteractiveState
         }
       }
     }
-    this.control_settings = new AutorouteControl(hdlg.get_routing_board(), route_net_no, hdlg.settings);
+    this.control_settings = new AutorouteControl(hdlg.get_routing_board(), route_net_no, hdlg.settings.autoroute_settings);
     // this.control_settings.ripup_allowed = true;
     // this.control_settings.is_fanout = true;
     this.control_settings.ripup_pass_no = hdlg.settings.autoroute_settings.get_start_pass_no();

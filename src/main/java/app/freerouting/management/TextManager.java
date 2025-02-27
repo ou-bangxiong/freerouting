@@ -3,9 +3,19 @@ package app.freerouting.management;
 import app.freerouting.logger.FRLogger;
 import app.freerouting.settings.GlobalSettings;
 
+import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 import javax.swing.*;
 import java.awt.*;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -38,6 +48,7 @@ public class TextManager
   private String currentBaseName;
   private ResourceBundle defaultMessages;
   private ResourceBundle classMessages;
+  private ResourceBundle englishClassMessages;
   private Font materialDesignIcons = null;
 
   public TextManager(Class baseClass, Locale locale)
@@ -59,10 +70,152 @@ public class TextManager
     }
   }
 
+  public static String convertInstantToString(Instant instant)
+  {
+    return convertInstantToString(instant, "yyyyMMdd_HHmmss");
+  }
+
+  public static String convertInstantToString(Instant instant, String format)
+  {
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern(format);
+    LocalDateTime localDateTime = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+    return localDateTime.format(formatter);
+  }
+
+  public static String generateRandomAlphanumericString(int length)
+  {
+    String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    StringBuilder randomString = new StringBuilder();
+    for (int i = 0; i < length; i++)
+    {
+      int index = (int) (characters.length() * Math.random());
+      randomString.append(characters.charAt(index));
+    }
+    return randomString.toString();
+  }
+
+  public static Long parseTimespanString(String timespanString)
+  {
+    try
+    {
+      // convert the string from "HH:mm:ss" or "mm:ss" or "ss" format to "PnDTnHnMn.nS" format
+      var durationString = convertFromTimespanToDurationFormat(timespanString);
+      // parse the duration
+      Duration duration = Duration.parse(durationString);
+      return duration.getSeconds();
+    } catch (DateTimeParseException e)
+    {
+      return null;
+    }
+  }
+
+  public static String convertFromTimespanToDurationFormat(String timespanString)
+  {
+    String[] parts = timespanString.split(":");
+    StringBuilder durationString = new StringBuilder("PT");
+
+    if (parts.length == 3)
+    {
+      durationString
+          .append(parts[0])
+          .append("H")
+          .append(parts[1])
+          .append("M")
+          .append(parts[2])
+          .append("S");
+    }
+    else if (parts.length == 2)
+    {
+      durationString
+          .append(parts[0])
+          .append("M")
+          .append(parts[1])
+          .append("S");
+    }
+    else if (parts.length == 1)
+    {
+      durationString
+          .append(parts[0])
+          .append("S");
+    }
+
+    return durationString.toString();
+  }
+
+  /**
+   * Shortens a string to a specified number of characters by replacing the middle part with dots
+   *
+   * @param text               The text to shorten
+   * @param peakCharacterCount The number of characters to keep at the beginning and end of the text
+   *                           Example:
+   *                           shortenString("This is a long text", 3) -> "Thi...ext"
+   *                           shortenString("This is a long text", 5) -> "This ... text"
+   *                           shortenString("This is a long text", 10) -> "This is a long text"
+   * @return The shortened text
+   */
+  public static String shortenString(String text, int peakCharacterCount)
+  {
+    String shortenedText = text;
+    if (text.length() > peakCharacterCount * 2)
+    {
+      shortenedText = shortenedText.substring(0, peakCharacterCount) + "..." + text.substring(text.length() - peakCharacterCount);
+    }
+    return shortenedText;
+  }
+
+  /**
+   * Removes quotes from the beginning and end of a string
+   *
+   * @param text The text to remove quotes from
+   * @return The text without quotes
+   */
+  public static String removeQuotes(String text)
+  {
+    if ((text == null) || (text.length() < 2))
+    {
+      return text;
+    }
+
+    if (text.startsWith("\"") && text.endsWith("\""))
+    {
+      text = text.substring(1, text.length() - 1);
+    }
+
+    return text;
+  }
+
+  /**
+   * Decrypts a string using AES-256-CBC with a passphrase
+   *
+   * @param encodedText The text to encrypt
+   * @param passphrase  The passphrase to use for encryption
+   * @return The encrypted text
+   */
+  public static byte[] decryptAes256Cbc(byte[] encodedText, String passphrase)
+  {
+    try
+    {
+      IvParameterSpec iv = new IvParameterSpec("freeroutingivpar".getBytes(StandardCharsets.UTF_8));
+      SecretKeySpec skeySpec = new SecretKeySpec(passphrase.getBytes(StandardCharsets.UTF_8), "AES");
+
+      Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
+      cipher.init(Cipher.DECRYPT_MODE, skeySpec, iv);
+      byte[] original = cipher.doFinal(encodedText);
+
+      return original;
+    } catch (Exception ex)
+    {
+      FRLogger.error("There was a problem decrypting the text", ex);
+    }
+
+    return null;
+  }
+
   private void loadResourceBundle(String baseName)
   {
     this.currentBaseName = baseName;
 
+    // Load the default messages that are common to all classes
     try
     {
       defaultMessages = ResourceBundle.getBundle("app.freerouting.Common", currentLocale);
@@ -79,6 +232,7 @@ public class TextManager
       }
     }
 
+    // Load the class-specific messages
     try
     {
       classMessages = ResourceBundle.getBundle(currentBaseName, currentLocale);
@@ -94,6 +248,15 @@ public class TextManager
         //FRLogger.error("There was a problem loading the resource bundle '" + currentBaseName + "' of locale 'en-US'",null);
       }
     }
+
+    // Load the fallback English messages
+    try
+    {
+      englishClassMessages = ResourceBundle.getBundle(currentBaseName, Locale.forLanguageTag("en"));
+    } catch (Exception e)
+    {
+      //FRLogger.warn("There was a problem loading the resource bundle '" + currentBaseName + "' of locale 'en'");
+    }
   }
 
   public String getText(String key, String... args)
@@ -106,6 +269,10 @@ public class TextManager
     else if ((defaultMessages != null) && (defaultMessages.containsKey(key)))
     {
       text = defaultMessages.getString(key);
+    }
+    else if ((englishClassMessages != null) && (englishClassMessages.containsKey(key)))
+    {
+      text = englishClassMessages.getString(key);
     }
     else
     {
@@ -216,7 +383,9 @@ public class TextManager
     else
     {
       // Handle other components like JLabel, JTextArea, etc.
-      String componentType = component.getClass().getName();
+      String componentType = component
+          .getClass()
+          .getName();
       FRLogger.warn("The component type '" + componentType + "' is not supported");
     }
 
@@ -233,4 +402,5 @@ public class TextManager
     this.currentLocale = locale;
     loadResourceBundle(currentBaseName);
   }
+
 }

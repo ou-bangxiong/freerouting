@@ -3,13 +3,13 @@ package app.freerouting.interactive;
 import app.freerouting.autoroute.AutorouteEngine;
 import app.freerouting.board.Component;
 import app.freerouting.board.*;
+import app.freerouting.core.Package;
 import app.freerouting.datastructures.Stoppable;
 import app.freerouting.geometry.planar.FloatPoint;
 import app.freerouting.geometry.planar.IntPoint;
 import app.freerouting.geometry.planar.Point;
 import app.freerouting.geometry.planar.Vector;
 import app.freerouting.gui.WindowObjectInfo;
-import app.freerouting.library.Package;
 import app.freerouting.rules.Net;
 
 import javax.swing.*;
@@ -29,7 +29,7 @@ public class SelectedItemState extends InteractiveState
   /**
    * Creates a new instance of SelectedItemState
    */
-  private SelectedItemState(Set<Item> p_item_list, InteractiveState p_parent_state, BoardHandling p_board_handling, ActivityReplayFile p_activityReplayFile)
+  private SelectedItemState(Set<Item> p_item_list, InteractiveState p_parent_state, GuiBoardManager p_board_handling, ActivityReplayFile p_activityReplayFile)
   {
     super(p_parent_state, p_board_handling, p_activityReplayFile);
     item_list = p_item_list;
@@ -39,7 +39,7 @@ public class SelectedItemState extends InteractiveState
    * Creates a new SelectedItemState with the items in p_item_list selected. Returns null, if
    * p_item_list is empty.
    */
-  public static SelectedItemState get_instance(Set<Item> p_item_list, InteractiveState p_parent_state, BoardHandling p_board_handling, ActivityReplayFile p_activityReplayFile)
+  public static SelectedItemState get_instance(Set<Item> p_item_list, InteractiveState p_parent_state, GuiBoardManager p_board_handling, ActivityReplayFile p_activityReplayFile)
   {
     if (p_item_list.isEmpty())
     {
@@ -268,7 +268,7 @@ public class SelectedItemState extends InteractiveState
     boolean all_items_removed;
     if (hdlg.settings.push_enabled)
     {
-      all_items_removed = hdlg.get_routing_board().remove_items_and_pull_tight(item_list, hdlg.settings.trace_pull_tight_region_width, hdlg.settings.trace_pull_tight_accuracy);
+      all_items_removed = hdlg.get_routing_board().remove_items_and_pull_tight(item_list, hdlg.settings.trace_pull_tight_region_width, hdlg.settings.autoroute_settings.trace_pull_tight_accuracy);
     }
     else
     {
@@ -340,7 +340,7 @@ public class SelectedItemState extends InteractiveState
     }
     for (Item curr_item : autoroute_item_list)
     {
-      if (p_stoppable_thread != null && p_stoppable_thread.is_stop_requested())
+      if (p_stoppable_thread != null && p_stoppable_thread.isStopRequested())
       {
         interrupted = true;
         break;
@@ -365,7 +365,7 @@ public class SelectedItemState extends InteractiveState
         via_costs = hdlg.settings.autoroute_settings.get_via_costs();
       }
       hdlg.get_routing_board().start_marking_changed_area();
-      AutorouteEngine.AutorouteResult autoroute_result = hdlg.get_routing_board().autoroute(curr_item, hdlg.settings, via_costs, p_stoppable_thread, null);
+      AutorouteEngine.AutorouteResult autoroute_result = hdlg.get_routing_board().autoroute(curr_item, hdlg.settings.autoroute_settings, via_costs, p_stoppable_thread, null);
       if (autoroute_result == AutorouteEngine.AutorouteResult.ROUTED)
       {
         ++found_count;
@@ -421,7 +421,7 @@ public class SelectedItemState extends InteractiveState
     }
     int not_found_count = 0;
     int found_count = 0;
-    int trace_pull_tight_accuracy = hdlg.settings.trace_pull_tight_accuracy;
+    int trace_pull_tight_accuracy = hdlg.settings.autoroute_settings.trace_pull_tight_accuracy;
     boolean interrupted = false;
     Collection<Pin> fanout_list = new LinkedList<>();
     for (Item curr_item : item_list)
@@ -442,13 +442,13 @@ public class SelectedItemState extends InteractiveState
     }
     for (Pin curr_pin : fanout_list)
     {
-      if (p_stoppable_thread != null && p_stoppable_thread.is_stop_requested())
+      if (p_stoppable_thread != null && p_stoppable_thread.isStopRequested())
       {
         interrupted = true;
         break;
       }
       hdlg.get_routing_board().start_marking_changed_area();
-      AutorouteEngine.AutorouteResult autoroute_result = hdlg.get_routing_board().fanout(curr_pin, hdlg.settings, -1, p_stoppable_thread, null);
+      AutorouteEngine.AutorouteResult autoroute_result = hdlg.get_routing_board().fanout(curr_pin, hdlg.settings.autoroute_settings, -1, p_stoppable_thread, null);
       if (autoroute_result == AutorouteEngine.AutorouteResult.ROUTED)
       {
         ++found_count;
@@ -507,7 +507,7 @@ public class SelectedItemState extends InteractiveState
     boolean interrupted = false;
     for (Item curr_item : item_list)
     {
-      if (p_stoppable_thread != null && p_stoppable_thread.is_stop_requested())
+      if (p_stoppable_thread != null && p_stoppable_thread.isStopRequested())
       {
         interrupted = true;
         break;
@@ -518,22 +518,22 @@ public class SelectedItemState extends InteractiveState
       }
       if (curr_item instanceof PolylineTrace curr_trace)
       {
-        boolean something_changed = curr_trace.pull_tight(!hdlg.settings.push_enabled, hdlg.settings.trace_pull_tight_accuracy, p_stoppable_thread);
+        boolean something_changed = curr_trace.pull_tight(!hdlg.settings.push_enabled, hdlg.settings.autoroute_settings.trace_pull_tight_accuracy, p_stoppable_thread);
         if (!something_changed)
         {
-          curr_trace.smoothen_end_corners_fork(!hdlg.settings.push_enabled, hdlg.settings.trace_pull_tight_accuracy, p_stoppable_thread);
+          curr_trace.smoothen_end_corners_fork(!hdlg.settings.push_enabled, hdlg.settings.autoroute_settings.trace_pull_tight_accuracy, p_stoppable_thread);
         }
       }
       else if (curr_item instanceof Via)
       {
-        OptViaAlgo.opt_via_location(hdlg.get_routing_board(), (Via) curr_item, null, hdlg.settings.trace_pull_tight_accuracy, 10);
+        OptViaAlgo.opt_via_location(hdlg.get_routing_board(), (Via) curr_item, null, hdlg.settings.autoroute_settings.trace_pull_tight_accuracy, 10);
       }
     }
     String curr_message;
 
     if (hdlg.settings.push_enabled && !interrupted)
     {
-      hdlg.get_routing_board().opt_changed_area(new int[0], null, hdlg.settings.trace_pull_tight_accuracy, null, p_stoppable_thread, 0);
+      hdlg.get_routing_board().opt_changed_area(new int[0], null, hdlg.settings.autoroute_settings.trace_pull_tight_accuracy, null, p_stoppable_thread, 0);
     }
 
     if (p_stoppable_thread != null)

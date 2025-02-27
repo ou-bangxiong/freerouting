@@ -3,13 +3,13 @@ package app.freerouting.board;
 import app.freerouting.autoroute.AutorouteControl;
 import app.freerouting.boardgraphics.Drawable;
 import app.freerouting.boardgraphics.GraphicsContext;
+import app.freerouting.core.BoardLibrary;
+import app.freerouting.core.Padstack;
 import app.freerouting.datastructures.ShapeTree.TreeEntry;
 import app.freerouting.datastructures.UndoableObjects;
 import app.freerouting.geometry.planar.Point;
 import app.freerouting.geometry.planar.Vector;
 import app.freerouting.geometry.planar.*;
-import app.freerouting.library.BoardLibrary;
-import app.freerouting.library.Padstack;
 import app.freerouting.logger.FRLogger;
 import app.freerouting.rules.BoardRules;
 
@@ -25,9 +25,8 @@ import java.util.*;
  */
 public class BasicBoard implements Serializable
 {
-
   /**
-   * List of items inserted into this board (eg. trace classes). Traces are Item classes that implement the Connectable interface.
+   * List of items inserted into this board (e.g. trace classes). Traces are Item classes that implement the Connectable interface.
    */
   public final UndoableObjects item_list;
   /**
@@ -115,7 +114,9 @@ public class BasicBoard implements Serializable
     StringBuilder stringBuffer = new StringBuilder();
     for (int i = 0; i < arrayBytes.length; i++)
     {
-      stringBuffer.append(Integer.toString((arrayBytes[i] & 0xff) + 0x100, 16).substring(1));
+      stringBuffer.append(Integer
+          .toString((arrayBytes[i] & 0xff) + 0x100, 16)
+          .substring(1));
     }
     return stringBuffer.toString();
   }
@@ -209,7 +210,9 @@ public class BasicBoard implements Serializable
       return null;
     }
     PolylineTrace new_trace = new PolylineTrace(p_polyline, p_layer, p_half_width, p_net_no_arr, p_clearance_class, 0, 0, p_fixed_state, this);
-    if (new_trace.first_corner().equals(new_trace.last_corner()))
+    if (new_trace
+        .first_corner()
+        .equals(new_trace.last_corner()))
     {
       if (p_fixed_state.ordinal() < FixedState.USER_FIXED.ordinal())
       {
@@ -482,12 +485,17 @@ public class BasicBoard implements Serializable
     item_list.delete(p_item);
 
     // let the observers synchronize the deletion
-    communication.observers.notify_deleted(p_item);
+    if ((communication != null) && (communication.observers != null))
+    {
+      communication.observers.notify_deleted(p_item);
+    }
   }
 
   /**
-   * looks, if an item with id_no p_id_no is on the board. Returns the found item or null, if no
-   * such item is found.
+   * Searches for an item with the specified id number on the board.
+   *
+   * @param p_id_no the id number of the item to search for
+   * @return the found item, or null if no such item is found
    */
   public Item get_item(int p_id_no)
   {
@@ -881,7 +889,9 @@ public class BasicBoard implements Serializable
   {
     ItemSelectionFilter filter = new ItemSelectionFilter(ItemSelectionFilter.SelectableChoices.TRACES);
     Collection<Item> picked_items = this.pick_items(p_location, p_layer, filter);
-    IntOctagon location_shape = TileShape.get_instance(p_location).bounding_octagon();
+    IntOctagon location_shape = TileShape
+        .get_instance(p_location)
+        .bounding_octagon();
     boolean trace_split = false;
     for (Item curr_item : picked_items)
     {
@@ -940,7 +950,9 @@ public class BasicBoard implements Serializable
    */
   public Set<SearchTreeObject> overlapping_objects(ConvexShape p_shape, int p_layer)
   {
-    return this.search_tree_manager.get_default_tree().overlapping_objects(p_shape, p_layer);
+    return this.search_tree_manager
+        .get_default_tree()
+        .overlapping_objects(p_shape, p_layer);
   }
 
   /**
@@ -1273,7 +1285,7 @@ public class BasicBoard implements Serializable
    */
   public void start_notify_observers()
   {
-    if (this.communication.observers != null)
+    if ((communication != null) && (this.communication.observers != null))
     {
       communication.observers.activate();
     }
@@ -1284,7 +1296,7 @@ public class BasicBoard implements Serializable
    */
   public void end_notify_observers()
   {
-    if (this.communication.observers != null)
+    if ((communication != null) && (this.communication.observers != null))
     {
       communication.observers.deactivate();
     }
@@ -1296,7 +1308,7 @@ public class BasicBoard implements Serializable
   public boolean observers_active()
   {
     boolean result;
-    if (this.communication.observers != null)
+    if ((communication != null) && (this.communication.observers != null))
     {
       result = communication.observers.is_active();
     }
@@ -1346,7 +1358,10 @@ public class BasicBoard implements Serializable
     p_item.board = this;
     item_list.insert(p_item);
     search_tree_manager.insert(p_item);
-    communication.observers.notify_new(p_item);
+    if ((communication != null) && (communication.observers != null))
+    {
+      communication.observers.notify_new(p_item);
+    }
     additional_update_after_change(p_item);
   }
 
@@ -1393,7 +1408,10 @@ public class BasicBoard implements Serializable
       search_tree_manager.insert(curr_item);
       curr_item.clear_autoroute_info();
       // let the observers know the insertion
-      communication.observers.notify_new(curr_item);
+      if ((communication != null) && (communication.observers != null))
+      {
+        communication.observers.notify_new(curr_item);
+      }
       if (p_changed_nets != null)
       {
         for (int i = 0; i < curr_item.net_count(); ++i)
@@ -1439,7 +1457,10 @@ public class BasicBoard implements Serializable
       search_tree_manager.insert(curr_item);
       curr_item.clear_autoroute_info();
       // let the observers know the insertion
-      communication.observers.notify_new(curr_item);
+      if ((communication != null) && (communication.observers != null))
+      {
+        communication.observers.notify_new(curr_item);
+      }
       if (p_changed_nets != null)
       {
         for (int i = 0; i < curr_item.net_count(); ++i)
@@ -1485,7 +1506,9 @@ public class BasicBoard implements Serializable
         {
           continue;
         }
-        if (curr_trace.first_corner().equals(p_location))
+        if (curr_trace
+            .first_corner()
+            .equals(p_location))
         {
           Collection<Item> contacts = curr_trace.get_start_contacts();
           if (contacts.isEmpty())
@@ -1493,7 +1516,9 @@ public class BasicBoard implements Serializable
             return curr_trace;
           }
         }
-        if (curr_trace.last_corner().equals(p_location))
+        if (curr_trace
+            .last_corner()
+            .equals(p_location))
         {
           Collection<Item> contacts = curr_trace.get_end_contacts();
           if (contacts.isEmpty())

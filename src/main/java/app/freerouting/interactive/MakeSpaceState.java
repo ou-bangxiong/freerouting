@@ -21,7 +21,7 @@ public class MakeSpaceState extends DragState
   /**
    * Creates a new instance of MakeSpaceState
    */
-  public MakeSpaceState(FloatPoint p_location, InteractiveState p_parent_state, BoardHandling p_board_handling, ActivityReplayFile p_activityReplayFile)
+  public MakeSpaceState(FloatPoint p_location, InteractiveState p_parent_state, GuiBoardManager p_board_handling, ActivityReplayFile p_activityReplayFile)
   {
     super(p_location, p_parent_state, p_board_handling, p_activityReplayFile);
     int[] shove_trace_width_arr = new int[hdlg.get_routing_board().get_layer_count()];
@@ -35,7 +35,7 @@ public class MakeSpaceState extends DragState
     }
     int[] route_net_no_arr = new int[1];
     route_net_no_arr[0] = Nets.hidden_net_no;
-    route = new Route(p_location.round(), hdlg.settings.layer, shove_trace_width_arr, layer_active_arr, route_net_no_arr, 0, ViaRule.EMPTY, true, hdlg.settings.trace_pull_tight_region_width, hdlg.settings.trace_pull_tight_accuracy, null, null, hdlg.get_routing_board(), false, false, false, hdlg.settings.hilight_routing_obstacle);
+    route = new Route(p_location.round(), hdlg.settings.layer, shove_trace_width_arr, layer_active_arr, route_net_no_arr, 0, ViaRule.EMPTY, true, hdlg.settings.trace_pull_tight_region_width, hdlg.settings.autoroute_settings.trace_pull_tight_accuracy, null, null, hdlg.get_routing_board(), false, false, false, hdlg.settings.hilight_routing_obstacle);
   }
 
   @Override

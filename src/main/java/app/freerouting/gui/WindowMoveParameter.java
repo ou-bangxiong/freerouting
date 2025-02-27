@@ -1,7 +1,7 @@
 package app.freerouting.gui;
 
-import app.freerouting.interactive.BoardHandling;
-import app.freerouting.management.FRAnalytics;
+import app.freerouting.interactive.GuiBoardManager;
+import app.freerouting.management.analytics.FRAnalytics;
 
 import javax.swing.*;
 import java.awt.*;
@@ -14,7 +14,7 @@ import java.text.NumberFormat;
 public class WindowMoveParameter extends BoardSavableSubWindow
 {
 
-  private final BoardHandling board_handling;
+  private final GuiBoardManager board_handling;
   private final JFormattedTextField horizontal_grid_field;
   private final JFormattedTextField vertical_grid_field;
   private final JRadioButton settings_controls_zoom_radiobutton;

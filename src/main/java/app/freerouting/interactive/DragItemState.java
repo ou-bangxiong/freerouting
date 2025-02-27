@@ -22,7 +22,7 @@ public class DragItemState extends DragState
   /**
    * Creates a new instance of MoveItemState
    */
-  protected DragItemState(Item p_item_to_move, FloatPoint p_location, InteractiveState p_parent_state, BoardHandling p_board_handling, ActivityReplayFile p_activityReplayFile)
+  protected DragItemState(Item p_item_to_move, FloatPoint p_location, InteractiveState p_parent_state, GuiBoardManager p_board_handling, ActivityReplayFile p_activityReplayFile)
   {
     super(p_location, p_parent_state, p_board_handling, p_activityReplayFile);
     item_to_move = p_item_to_move;
@@ -105,7 +105,7 @@ public class DragItemState extends DragState
         }
         this.something_dragged = true;
       }
-      if (!move_component.insert(hdlg.settings.trace_pull_tight_region_width, hdlg.settings.trace_pull_tight_accuracy))
+      if (!move_component.insert(hdlg.settings.trace_pull_tight_region_width, hdlg.settings.autoroute_settings.trace_pull_tight_accuracy))
       {
         // an insert error occurred, end the drag state
         return this.return_state;

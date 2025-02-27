@@ -1,10 +1,12 @@
 package app.freerouting.gui;
 
+import app.freerouting.core.RoutingJob;
 import app.freerouting.geometry.planar.FloatPoint;
 import app.freerouting.interactive.ActivityReplayFileScope;
-import app.freerouting.interactive.BoardHandling;
+import app.freerouting.interactive.GuiBoardManager;
 import app.freerouting.interactive.ScreenMessages;
 import app.freerouting.logger.FRLogger;
+import app.freerouting.settings.GlobalSettings;
 
 import javax.swing.*;
 import javax.swing.event.TableModelEvent;
@@ -12,7 +14,6 @@ import javax.swing.event.TableModelListener;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.Point2D;
-import java.util.Locale;
 
 /**
  * Panel containing the graphical representation of a routing board.
@@ -24,6 +25,7 @@ public class BoardPanel extends JPanel
   public final ScreenMessages screen_messages;
   public final BoardFrame board_frame;
   private final JScrollPane scroll_pane;
+  private final GlobalSettings globalSettings;
   public JPopupMenu popup_menu_insert_cancel;
   public PopupMenuCopy popup_menu_copy;
   public PopupMenuMove popup_menu_move;
@@ -32,7 +34,7 @@ public class BoardPanel extends JPanel
   public PopupMenuDynamicRoute popup_menu_dynamic_route;
   public PopupMenuStitchRoute popup_menu_stitch_route;
   public JPopupMenu popup_menu_select;
-  BoardHandling board_handling;
+  GuiBoardManager board_handling;
   Point2D right_button_click_location;
   private Robot robot;
   private Point middle_drag_position;
@@ -41,16 +43,13 @@ public class BoardPanel extends JPanel
    * custom_cursor is used.
    */
   private Cursor custom_cursor;
-  private boolean save_intermediate_stages;
-  private float optimization_improvement_threshold;
-  private Locale default_locale;
 
   /**
    * Creates a new BoardPanel in an Application
    */
-  public BoardPanel(ScreenMessages p_screen_messages, BoardFrame p_board_frame, Locale p_locale, boolean p_save_intermediate_stages, float p_optimization_improvement_threshold)
+  public BoardPanel(ScreenMessages p_screen_messages, BoardFrame p_board_frame, GlobalSettings globalSettings, RoutingJob routingJob)
   {
-    screen_messages = p_screen_messages;
+    this.screen_messages = p_screen_messages;
     try
     {
       // used to be able to change the location of the mouse pointer
@@ -59,17 +58,14 @@ public class BoardPanel extends JPanel
     {
       FRLogger.warn("unable to create robot");
     }
-    board_frame = p_board_frame;
+    this.board_frame = p_board_frame;
+    this.globalSettings = globalSettings;
     this.scroll_pane = board_frame.scroll_pane;
-    default_init(p_locale, p_save_intermediate_stages, p_optimization_improvement_threshold);
+    default_init(globalSettings, routingJob);
   }
 
-  private void default_init(Locale p_locale, boolean p_save_intermediate_stages, float p_optimization_improvement_threshold)
+  private void default_init(GlobalSettings globalSettings, RoutingJob routingJob)
   {
-    this.default_locale = p_locale;
-    this.save_intermediate_stages = p_save_intermediate_stages;
-    this.optimization_improvement_threshold = p_optimization_improvement_threshold;
-
     setLayout(new BorderLayout());
 
     setBackground(new Color(0, 0, 0));
@@ -120,14 +116,15 @@ public class BoardPanel extends JPanel
       }
     });
     addMouseWheelListener(evt -> board_handling.mouse_wheel_moved(evt.getWheelRotation()));
-    board_handling = new BoardHandling(this, this.default_locale, this.save_intermediate_stages, this.optimization_improvement_threshold);
+    globalSettings.routerSettings.save_intermediate_stages = globalSettings.featureFlags.snapshots && globalSettings.routerSettings.save_intermediate_stages;
+    board_handling = new GuiBoardManager(this, globalSettings, routingJob);
     setAutoscrolls(true);
     this.setCursor(new java.awt.Cursor(java.awt.Cursor.CROSSHAIR_CURSOR));
   }
 
-  public void reset_board_handling()
+  public void reset_board_handling(RoutingJob routingJob)
   {
-    board_handling = new BoardHandling(this, this.default_locale, this.save_intermediate_stages, this.optimization_improvement_threshold);
+    board_handling = new GuiBoardManager(this, globalSettings, routingJob);
   }
 
   void create_popup_menus()

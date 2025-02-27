@@ -18,7 +18,7 @@ public class TileConstructionState extends CornerItemConstructionState
   /**
    * Creates a new instance of TileConstructionState
    */
-  private TileConstructionState(FloatPoint p_location, InteractiveState p_parent_state, BoardHandling p_board_handling, ActivityReplayFile p_activityReplayFile)
+  private TileConstructionState(FloatPoint p_location, InteractiveState p_parent_state, GuiBoardManager p_board_handling, ActivityReplayFile p_activityReplayFile)
   {
     super(p_parent_state, p_board_handling, p_activityReplayFile);
     if (this.activityReplayFile != null)
@@ -32,7 +32,7 @@ public class TileConstructionState extends CornerItemConstructionState
    * Returns a new instance of this class If p_logfile != null; the creation of this item is stored
    * in a logfile
    */
-  public static TileConstructionState get_instance(FloatPoint p_location, InteractiveState p_parent_state, BoardHandling p_board_handling, ActivityReplayFile p_activityReplayFile)
+  public static TileConstructionState get_instance(FloatPoint p_location, InteractiveState p_parent_state, GuiBoardManager p_board_handling, ActivityReplayFile p_activityReplayFile)
   {
     return new TileConstructionState(p_location, p_parent_state, p_board_handling, p_activityReplayFile);
   }
@@ -218,6 +218,6 @@ public class TileConstructionState extends CornerItemConstructionState
   @Override
   public void display_default_message()
   {
-    hdlg.screen_messages.set_status_message(tm.getText("creatig_tile"));
+    hdlg.screen_messages.set_status_message(tm.getText("creating_tile"));
   }
 }

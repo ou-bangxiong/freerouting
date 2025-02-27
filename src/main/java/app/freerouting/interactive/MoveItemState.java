@@ -2,11 +2,11 @@ package app.freerouting.interactive;
 
 import app.freerouting.board.Component;
 import app.freerouting.board.*;
+import app.freerouting.core.BoardLibrary;
 import app.freerouting.geometry.planar.FloatPoint;
 import app.freerouting.geometry.planar.IntPoint;
 import app.freerouting.geometry.planar.Point;
 import app.freerouting.geometry.planar.Vector;
-import app.freerouting.library.BoardLibrary;
 import app.freerouting.logger.FRLogger;
 import app.freerouting.management.TextManager;
 
@@ -26,15 +26,15 @@ public class MoveItemState extends InteractiveState
    */
   private final Component grid_snap_component;
   private final Collection<NetItems> net_items_list;
+  private final boolean observers_activated;
   private IntPoint current_position;
   private IntPoint previous_position;
   private Collection<ClearanceViolation> clearance_violations;
-  private final boolean observers_activated;
 
   /**
    * Creates a new instance of MoveComponentState
    */
-  private MoveItemState(FloatPoint p_location, Set<Item> p_item_list, Set<Component> p_component_list, Component p_first_component, InteractiveState p_parent_state, BoardHandling p_board_handling, ActivityReplayFile p_activityReplayFile)
+  private MoveItemState(FloatPoint p_location, Set<Item> p_item_list, Set<Component> p_component_list, Component p_first_component, InteractiveState p_parent_state, GuiBoardManager p_board_handling, ActivityReplayFile p_activityReplayFile)
   {
     super(p_parent_state, p_board_handling, p_activityReplayFile);
     this.component_list = p_component_list;
@@ -77,7 +77,7 @@ public class MoveItemState extends InteractiveState
    * Returns a new instance of MoveComponentState, or null, if the items of p_itemlist do not belong
    * to a single component.
    */
-  public static MoveItemState get_instance(FloatPoint p_location, Collection<Item> p_item_list, InteractiveState p_parent_state, BoardHandling p_board_handling, ActivityReplayFile p_activityReplayFile)
+  public static MoveItemState get_instance(FloatPoint p_location, Collection<Item> p_item_list, InteractiveState p_parent_state, GuiBoardManager p_board_handling, ActivityReplayFile p_activityReplayFile)
   {
 
     TextManager tm = new TextManager(InteractiveState.class, p_board_handling.get_locale());

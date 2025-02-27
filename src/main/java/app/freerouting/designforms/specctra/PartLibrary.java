@@ -1,6 +1,6 @@
 package app.freerouting.designforms.specctra;
 
-import app.freerouting.library.LogicalParts;
+import app.freerouting.core.LogicalParts;
 import app.freerouting.logger.FRLogger;
 
 import java.io.IOException;
@@ -34,7 +34,7 @@ public class PartLibrary extends ScopeKeyword
 
     for (int i = 1; i <= logical_parts.count(); ++i)
     {
-      app.freerouting.library.LogicalPart curr_part = logical_parts.get(i);
+      app.freerouting.core.LogicalPart curr_part = logical_parts.get(i);
       p_par.file.start_scope();
       p_par.file.write("logical_part_mapping ");
       p_par.identifier_type.write(curr_part.name, p_par.file);
@@ -57,7 +57,7 @@ public class PartLibrary extends ScopeKeyword
 
     for (int i = 1; i <= logical_parts.count(); ++i)
     {
-      app.freerouting.library.LogicalPart curr_part = logical_parts.get(i);
+      app.freerouting.core.LogicalPart curr_part = logical_parts.get(i);
 
       p_par.file.start_scope();
       p_par.file.write("logical_part ");
@@ -66,7 +66,7 @@ public class PartLibrary extends ScopeKeyword
       for (int j = 0; j < curr_part.pin_count(); ++j)
       {
         p_par.file.new_line();
-        app.freerouting.library.LogicalPart.PartPin curr_pin = curr_part.get_pin(j);
+        app.freerouting.core.LogicalPart.PartPin curr_pin = curr_part.get_pin(j);
         p_par.file.write("(pin ");
         p_par.identifier_type.write(curr_pin.pin_name, p_par.file);
         p_par.file.write(" 0 ");
@@ -168,7 +168,7 @@ public class PartLibrary extends ScopeKeyword
       SortedSet<String> result = new TreeSet<>();
       for (; ; )
       {
-        p_scanner.yybegin(SpecctraDsnFileReader.NAME);
+        p_scanner.yybegin(SpecctraDsnStreamReader.NAME);
         next_token = p_scanner.next_token();
         if (next_token == CLOSED_BRACKET)
         {
@@ -263,7 +263,7 @@ public class PartLibrary extends ScopeKeyword
   {
     try
     {
-      p_scanner.yybegin(SpecctraDsnFileReader.NAME);
+      p_scanner.yybegin(SpecctraDsnStreamReader.NAME);
       Object next_token = p_scanner.next_token();
       if (!(next_token instanceof String pin_name))
       {
@@ -277,7 +277,7 @@ public class PartLibrary extends ScopeKeyword
         FRLogger.warn("PartLibrary.read_part_pin: integer expected at '" + p_scanner.get_scope_identifier() + "'");
         return null;
       }
-      p_scanner.yybegin(SpecctraDsnFileReader.NAME);
+      p_scanner.yybegin(SpecctraDsnStreamReader.NAME);
       next_token = p_scanner.next_token();
       if (!(next_token instanceof String gate_name))
       {
@@ -292,7 +292,7 @@ public class PartLibrary extends ScopeKeyword
         return null;
       }
       int gate_swap_code = (Integer) next_token;
-      p_scanner.yybegin(SpecctraDsnFileReader.NAME);
+      p_scanner.yybegin(SpecctraDsnStreamReader.NAME);
       next_token = p_scanner.next_token();
       if (!(next_token instanceof String gate_pin_name))
       {

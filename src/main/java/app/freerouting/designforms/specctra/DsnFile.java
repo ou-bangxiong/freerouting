@@ -1,12 +1,12 @@
 package app.freerouting.designforms.specctra;
 
 import app.freerouting.board.*;
-import app.freerouting.datastructures.IdNoGenerator;
+import app.freerouting.datastructures.IdentificationNumberGenerator;
 import app.freerouting.datastructures.IndentFileWriter;
 import app.freerouting.geometry.planar.TileShape;
-import app.freerouting.interactive.BoardHandling;
-import app.freerouting.interactive.IBoardHandling;
+import app.freerouting.interactive.BoardManager;
 import app.freerouting.logger.FRLogger;
+import app.freerouting.settings.RouterSettings;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,18 +28,20 @@ public class DsnFile
 
   /**
    * Creates a routing board from a Specctra DSN file. The parameters p_item_observers and
-   * p_item_id_no_generator are used, in case the board is embedded into a host system. Returns
+   * idNoGenerator are used, in case the board is embedded into a host system. Returns
    * false, if an error occurred.
    */
-  public static ReadResult read(InputStream p_input_stream, IBoardHandling p_board_handling, BoardObservers p_observers, IdNoGenerator p_item_id_no_generator)
+  public static ReadResult read(InputStream inputStream, BoardManager boardManager, BoardObservers boardObservers, IdentificationNumberGenerator identificationNumberGenerator)
   {
-    IJFlexScanner scanner = new SpecctraDsnFileReader(p_input_stream);
+    IJFlexScanner dsnFlexScanner = new SpecctraDsnStreamReader(inputStream);
+
+    // first, check if the file is a Specctra DSN file by looking for the first keywords "(pcb "
     Object curr_token;
     for (int i = 0; i < 3; ++i)
     {
       try
       {
-        curr_token = scanner.next_token();
+        curr_token = dsnFlexScanner.next_token();
       } catch (IOException e)
       {
         FRLogger.error("DsnFile.read: IO error scanning file", e);
@@ -53,7 +55,7 @@ public class DsnFile
       else if (i == 1)
       {
         keyword_ok = (curr_token == Keyword.PCB_SCOPE);
-        scanner.yybegin(SpecctraDsnFileReader.NAME); // to overread the name of the pcb for i = 2
+        dsnFlexScanner.yybegin(SpecctraDsnStreamReader.NAME); // to overread the name of the pcb for i = 2
       }
       if (!keyword_ok)
       {
@@ -61,16 +63,21 @@ public class DsnFile
         return ReadResult.ERROR;
       }
     }
-    ReadScopeParameter read_scope_par = new ReadScopeParameter(scanner, p_board_handling, p_observers, p_item_id_no_generator);
+
+    // create a helper class for the DSN reader
+    ReadScopeParameter read_scope_par = new ReadScopeParameter(dsnFlexScanner, boardManager, boardObservers, identificationNumberGenerator);
+
+    // read the rest of the file after the "(pcb" part
     boolean read_ok = Keyword.PCB_SCOPE.read_scope(read_scope_par);
     ReadResult result;
     if (read_ok)
     {
+      // the board object is now available in the board manager
       result = ReadResult.OK;
       if (read_scope_par.autoroute_settings == null)
       {
         // look for power planes with incorrect layer type and adjust autoroute parameters
-        adjust_plane_autoroute_settings(p_board_handling);
+        adjust_plane_autoroute_settings(boardManager);
       }
     }
     else if (!read_scope_par.board_outline_ok)
@@ -89,7 +96,7 @@ public class DsnFile
    * layer, if that layer does not contain any traces This is useful in case the layer type was not
    * set correctly to plane in the dsn-file. Returns true, if something was changed.
    */
-  private static boolean adjust_plane_autoroute_settings(IBoardHandling p_board_handling)
+  private static boolean adjust_plane_autoroute_settings(BoardManager p_board_handling)
   {
     BasicBoard routing_board = p_board_handling.get_routing_board();
     app.freerouting.board.LayerStructure board_layer_structure = routing_board.layer_structure;
@@ -131,7 +138,9 @@ public class DsnFile
     double board_area = 0;
     for (int i = 0; i < board_outline.shape_count(); ++i)
     {
-      TileShape[] curr_piece_arr = board_outline.get_shape(i).split_to_convex();
+      TileShape[] curr_piece_arr = board_outline
+          .get_shape(i)
+          .split_to_convex();
       if (curr_piece_arr != null)
       {
         for (TileShape curr_piece : curr_piece_arr)
@@ -152,7 +161,9 @@ public class DsnFile
       {
         continue;
       }
-      TileShape[] convex_pieces = curr_conduction_area.get_area().split_to_convex();
+      TileShape[] convex_pieces = curr_conduction_area
+          .get_area()
+          .split_to_convex();
       double curr_area = 0;
       for (TileShape curr_piece : convex_pieces)
       {
@@ -172,7 +183,9 @@ public class DsnFile
       }
 
       changed_layer_arr[layer_no] = true;
-      if (curr_conduction_area.get_fixed_state().ordinal() < FixedState.USER_FIXED.ordinal())
+      if (curr_conduction_area
+          .get_fixed_state()
+          .ordinal() < FixedState.USER_FIXED.ordinal())
       {
         curr_conduction_area.set_fixed_state(FixedState.USER_FIXED);
       }
@@ -183,7 +196,7 @@ public class DsnFile
     }
     // Adjust the layer preferred directions in the autoroute settings.
     // and deactivate the changed layers.
-    app.freerouting.interactive.AutorouteSettings autoroute_settings = p_board_handling.get_settings().autoroute_settings;
+    RouterSettings autoroute_settings = p_board_handling.get_settings().autoroute_settings;
     int layer_count = routing_board.get_layer_count();
     boolean curr_preferred_direction_is_horizontal = autoroute_settings.get_preferred_direction_is_horizontal(0);
     for (int i = 0; i < layer_count; ++i)
@@ -206,13 +219,13 @@ public class DsnFile
    * If p_compat_mode is true, only standard specctra dsn scopes are written, so that any host
    * system with a specctra interface can read them.
    */
-  public static boolean write(BoardHandling p_board_handling, OutputStream p_file, String p_design_name, boolean p_compat_mode)
+  public static boolean write(BoardManager boardManager, OutputStream outputStream, String p_design_name, boolean p_compat_mode)
   {
-    IndentFileWriter output_file = new IndentFileWriter(p_file);
+    IndentFileWriter output_file = new IndentFileWriter(outputStream);
 
     try
     {
-      write_pcb_scope(p_board_handling, output_file, p_design_name, p_compat_mode);
+      write_pcb_scope(boardManager, output_file, p_design_name, p_compat_mode);
     } catch (IOException e)
     {
       FRLogger.error("unable to write Specctra DSN file", e);
@@ -229,24 +242,24 @@ public class DsnFile
     return true;
   }
 
-  private static void write_pcb_scope(BoardHandling p_board_handling, IndentFileWriter p_file, String p_design_name, boolean p_compat_mode) throws IOException
+  private static void write_pcb_scope(BoardManager boardManager, IndentFileWriter indentFileWriter, String p_design_name, boolean p_compat_mode) throws IOException
   {
-    BasicBoard routing_board = p_board_handling.get_routing_board();
-    WriteScopeParameter write_scope_parameter = new WriteScopeParameter(routing_board, p_board_handling.settings.autoroute_settings, p_file, routing_board.communication.specctra_parser_info.string_quote, routing_board.communication.coordinate_transform, p_compat_mode);
+    BasicBoard routing_board = boardManager.get_routing_board();
+    WriteScopeParameter write_scope_parameter = new WriteScopeParameter(routing_board, null, indentFileWriter, routing_board.communication.specctra_parser_info.string_quote, routing_board.communication.coordinate_transform, p_compat_mode);
 
-    p_file.start_scope(false);
-    p_file.write("pcb ");
-    write_scope_parameter.identifier_type.write(p_design_name, p_file);
+    indentFileWriter.start_scope(false);
+    indentFileWriter.write("pcb ");
+    write_scope_parameter.identifier_type.write(p_design_name, indentFileWriter);
     Parser.write_scope(write_scope_parameter.file, write_scope_parameter.board.communication.specctra_parser_info, write_scope_parameter.identifier_type, false);
-    Resolution.write_scope(p_file, routing_board.communication);
-    Unit.write_scope(p_file, routing_board.communication.unit);
+    Resolution.write_scope(indentFileWriter, routing_board.communication);
+    Unit.write_scope(indentFileWriter, routing_board.communication.unit);
     Structure.write_scope(write_scope_parameter);
     Placement.write_scope(write_scope_parameter);
     Library.write_scope(write_scope_parameter);
     PartLibrary.write_scope(write_scope_parameter);
     Network.write_scope(write_scope_parameter);
     Wiring.write_scope(write_scope_parameter);
-    p_file.end_scope();
+    indentFileWriter.end_scope();
   }
 
   static boolean read_on_off_scope(IJFlexScanner p_scanner)
@@ -338,7 +351,7 @@ public class DsnFile
   {
     try
     {
-      p_scanner.yybegin(SpecctraDsnFileReader.NAME);
+      p_scanner.yybegin(SpecctraDsnStreamReader.NAME);
       String result = p_scanner.next_string();
       Object next_token = p_scanner.next_token();
       if (next_token != Keyword.CLOSED_BRACKET)

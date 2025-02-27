@@ -1,10 +1,13 @@
 package app.freerouting.autoroute;
 
+import app.freerouting.autoroute.events.TaskStateChangedEvent;
 import app.freerouting.board.RoutingBoard;
+import app.freerouting.core.RoutingJob;
+import app.freerouting.core.StoppableThread;
 import app.freerouting.datastructures.TimeLimit;
 import app.freerouting.geometry.planar.FloatPoint;
-import app.freerouting.interactive.InteractiveActionThread;
 import app.freerouting.logger.FRLogger;
+import app.freerouting.settings.RouterSettings;
 
 import java.util.Collection;
 import java.util.LinkedList;
@@ -14,22 +17,27 @@ import java.util.TreeSet;
 /**
  * Handles the sequencing of the fanout inside the batch autorouter.
  */
-public class BatchFanout
+public class BatchFanout extends NamedAlgorithm
 {
-
-  private final InteractiveActionThread thread;
-  private final RoutingBoard routing_board;
   private final SortedSet<Component> sorted_components;
+  protected RoutingJob job;
 
-  private BatchFanout(InteractiveActionThread p_thread)
+  public BatchFanout(RoutingJob routingJob)
   {
-    this.thread = p_thread;
-    this.routing_board = p_thread.hdlg.get_routing_board();
-    Collection<app.freerouting.board.Pin> board_smd_pin_list = routing_board.get_smd_pins();
+    this(routingJob.thread, routingJob.board, routingJob.routerSettings);
+    this.job = routingJob;
+  }
+
+
+  private BatchFanout(StoppableThread p_thread, RoutingBoard board, RouterSettings settings)
+  {
+    super(p_thread, board, settings);
+
+    Collection<app.freerouting.board.Pin> board_smd_pin_list = board.get_smd_pins();
     this.sorted_components = new TreeSet<>();
-    for (int i = 1; i <= routing_board.components.count(); ++i)
+    for (int i = 1; i <= board.components.count(); ++i)
     {
-      app.freerouting.board.Component curr_board_component = routing_board.components.get(i);
+      app.freerouting.board.Component curr_board_component = board.components.get(i);
       Component curr_component = new Component(curr_board_component, board_smd_pin_list);
       if (curr_component.smd_pin_count > 0)
       {
@@ -38,18 +46,24 @@ public class BatchFanout
     }
   }
 
-  public static void fanout_board(InteractiveActionThread p_thread)
+  public void runBatchLoop()
   {
-    BatchFanout fanout_instance = new BatchFanout(p_thread);
-    final int MAX_PASS_COUNT = 20;
-    for (int i = 0; i < MAX_PASS_COUNT; ++i)
+    this.fireTaskStateChangedEvent(new TaskStateChangedEvent(this, TaskState.STARTED, 0, this.board.get_hash()));
+
+    int curr_pass_no;
+    for (curr_pass_no = 0; curr_pass_no < this.settings.maxFanoutPasses; ++curr_pass_no)
     {
-      int routed_count = fanout_instance.fanout_pass(i);
+      String current_board_hash = this.board.get_hash();
+      this.fireTaskStateChangedEvent(new TaskStateChangedEvent(this, TaskState.RUNNING, curr_pass_no, current_board_hash));
+
+      int routed_count = this.fanout_pass(curr_pass_no);
       if (routed_count == 0)
       {
         break;
       }
     }
+
+    this.fireTaskStateChangedEvent(new TaskStateChangedEvent(this, TaskState.FINISHED, curr_pass_no, this.board.get_hash()));
   }
 
   /**
@@ -61,16 +75,15 @@ public class BatchFanout
     int routed_count = 0;
     int not_routed_count = 0;
     int insert_error_count = 0;
-    int ripup_costs = this.thread.hdlg.get_settings().autoroute_settings.get_start_ripup_costs() * (p_pass_no + 1);
+    int ripup_costs = settings.get_start_ripup_costs() * (p_pass_no + 1);
     for (Component curr_component : this.sorted_components)
     {
-      this.thread.hdlg.screen_messages.set_batch_fanout_info(p_pass_no + 1, components_to_go);
       for (Component.Pin curr_pin : curr_component.smd_pins)
       {
         double max_milliseconds = 10000 * (p_pass_no + 1);
         TimeLimit time_limit = new TimeLimit((int) max_milliseconds);
-        this.routing_board.start_marking_changed_area();
-        AutorouteEngine.AutorouteResult curr_result = this.routing_board.fanout(curr_pin.board_pin, this.thread.hdlg.get_settings(), ripup_costs, this.thread, time_limit);
+        this.board.start_marking_changed_area();
+        AutorouteEngine.AutorouteResult curr_result = this.board.fanout(curr_pin.board_pin, settings, ripup_costs, this.thread, time_limit);
         switch (curr_result)
         {
           case ROUTED -> ++routed_count;
@@ -79,9 +92,9 @@ public class BatchFanout
         }
         if (curr_result != AutorouteEngine.AutorouteResult.NOT_ROUTED)
         {
-          this.thread.hdlg.repaint();
+          fireBoardUpdatedEvent(this.board.get_statistics(), this.board);
         }
-        if (this.thread.is_stop_requested())
+        if (this.thread.isStopRequested())
         {
           return routed_count;
         }
@@ -90,6 +103,36 @@ public class BatchFanout
     }
     FRLogger.debug("fanout pass: " + (p_pass_no + 1) + ", routed: " + routed_count + ", not routed: " + not_routed_count + ", errors: " + insert_error_count);
     return routed_count;
+  }
+
+  @Override
+  protected String getId()
+  {
+    return "fanout-classic";
+  }
+
+  @Override
+  protected String getName()
+  {
+    return "Freerouting Classic Fanout";
+  }
+
+  @Override
+  protected String getVersion()
+  {
+    return "1.0";
+  }
+
+  @Override
+  protected String getDescription()
+  {
+    return "Freerouting Classic Fanout algorithm v1.0";
+  }
+
+  @Override
+  protected NamedAlgorithmType getType()
+  {
+    return NamedAlgorithmType.FANOUT;
   }
 
   private static class Component implements Comparable<Component>
@@ -121,7 +164,9 @@ public class BatchFanout
       double y = 0;
       for (app.freerouting.board.Pin curr_pin : curr_pin_list)
       {
-        FloatPoint curr_point = curr_pin.get_center().to_float();
+        FloatPoint curr_point = curr_pin
+            .get_center()
+            .to_float();
         x += curr_point.x;
         y += curr_point.y;
       }
@@ -171,7 +216,9 @@ public class BatchFanout
       Pin(app.freerouting.board.Pin p_board_pin)
       {
         this.board_pin = p_board_pin;
-        FloatPoint pin_location = p_board_pin.get_center().to_float();
+        FloatPoint pin_location = p_board_pin
+            .get_center()
+            .to_float();
         this.distance_to_component_center = pin_location.distance(gravity_center_of_smd_pins);
       }
 
